@@ -8,30 +8,39 @@ import (
 	"github.com/rhuss/alfred-google-tasks-workflow/internal/tasks"
 )
 
-// iconForTimeframe returns an appropriate icon for the timeframe group.
+var (
+	iconOverdue  = &aw.Icon{Value: "icons/overdue.png"}
+	iconToday    = &aw.Icon{Value: "icons/today.png"}
+	iconThisWeek = &aw.Icon{Value: "icons/thisweek.png"}
+	iconLater    = &aw.Icon{Value: "icons/later.png"}
+	iconNoDate   = &aw.Icon{Value: "icons/nodate.png"}
+	iconComplete = &aw.Icon{Value: "icons/complete.png"}
+	iconDelete   = &aw.Icon{Value: "icons/delete.png"}
+	iconOpen     = &aw.Icon{Value: "icons/open.png"}
+)
+
 func iconForTimeframe(tf tasks.Timeframe) *aw.Icon {
 	switch tf {
 	case tasks.TimeframeOverdue:
-		return aw.IconError
+		return iconOverdue
 	case tasks.TimeframeToday:
-		return aw.IconFavorite
+		return iconToday
 	case tasks.TimeframeThisWeek:
-		return aw.IconClock
+		return iconThisWeek
 	case tasks.TimeframeLater:
-		return aw.IconNote
+		return iconLater
 	case tasks.TimeframeNoDate:
-		return aw.IconInfo
+		return iconNoDate
 	default:
-		return aw.IconNote
+		return iconLater
 	}
 }
 
-// RenderGroupedTasks converts grouped tasks into Alfred Script Filter items.
 func (w *Workflow) RenderGroupedTasks(grouped tasks.GroupedTasks) {
 	if len(grouped.Groups) == 0 {
 		w.WF.NewItem("No tasks found").
 			Subtitle("Use 'gt add' to create a new task").
-			Icon(aw.IconInfo).
+			Icon(iconNoDate).
 			Valid(false)
 		w.WF.SendFeedback()
 		return
@@ -42,7 +51,6 @@ func (w *Workflow) RenderGroupedTasks(grouped tasks.GroupedTasks) {
 
 		for _, item := range group.Tasks {
 			subtitle := buildSubtitle(group.Label, item)
-			// arg format: listID:taskID for action handling
 			arg := fmt.Sprintf("%s:%s", item.ListID, item.Task.Id)
 
 			w.WF.NewItem(item.Task.Title).
@@ -56,7 +64,6 @@ func (w *Workflow) RenderGroupedTasks(grouped tasks.GroupedTasks) {
 	w.WF.SendFeedback()
 }
 
-// buildSubtitle creates the subtitle string showing group, list name, and due date.
 func buildSubtitle(groupLabel string, item tasks.TaskItem) string {
 	subtitle := fmt.Sprintf("[%s] %s", groupLabel, item.ListName)
 
@@ -67,25 +74,23 @@ func buildSubtitle(groupLabel string, item tasks.TaskItem) string {
 	return subtitle
 }
 
-// RenderActionMenu shows the action sub-menu for a selected task.
-// The taskArg format is "listID:taskID".
 func (w *Workflow) RenderActionMenu(taskArg string) {
 	w.WF.NewItem("Complete Task").
 		Subtitle("Mark this task as done").
 		Arg("complete:" + taskArg).
-		Icon(aw.IconFavorite).
+		Icon(iconComplete).
 		Valid(true)
 
 	w.WF.NewItem("Delete Task").
 		Subtitle("Permanently delete this task").
 		Arg("delete:" + taskArg).
-		Icon(aw.IconTrash).
+		Icon(iconDelete).
 		Valid(true)
 
 	w.WF.NewItem("Open in Browser").
 		Subtitle("Open Google Tasks in your browser").
 		Arg("open:" + taskArg).
-		Icon(aw.IconWeb).
+		Icon(iconOpen).
 		Valid(true)
 
 	w.WF.SendFeedback()
