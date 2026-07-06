@@ -106,6 +106,8 @@ func (w *Workflow) handleFilter(args []string) {
 		w.handleOpen()
 	case len(query) >= 4 && query[:4] == "add ":
 		w.handleAdd([]string{query[4:]})
+	case len(query) >= 5 && query[:5] == "list ":
+		w.handleList([]string{query[5:]})
 	case query == "list" || query == "":
 		w.handleList(nil)
 	default:
