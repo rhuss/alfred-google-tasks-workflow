@@ -35,6 +35,8 @@
 			</dict>
 		</array>
 	</dict>
+	<key>connectedoutputs</key>
+	<dict/>
 	<key>createdby</key>
 	<string>Roland Huss</string>
 	<key>description</key>
@@ -195,7 +197,29 @@ Supported: **today**, **tomorrow**, **monday**–**sunday**, **next week**, **20
 
 Add `#ListName` at the end to target a list. Lists are auto-created if new. Hyphens and underscores become spaces: `#My-List` = "My List".</string>
 	<key>uidata</key>
-	<dict/>
+	<dict>
+		<key>script-filter-main</key>
+		<dict>
+			<key>xpos</key>
+			<real>150</real>
+			<key>ypos</key>
+			<real>200</real>
+		</dict>
+		<key>script-filter-actions</key>
+		<dict>
+			<key>xpos</key>
+			<real>450</real>
+			<key>ypos</key>
+			<real>200</real>
+		</dict>
+		<key>run-action</key>
+		<dict>
+			<key>xpos</key>
+			<real>750</real>
+			<key>ypos</key>
+			<real>200</real>
+		</dict>
+	</dict>
 	<key>version</key>
 	<string>1.0.0</string>
 	<key>webaddress</key>
