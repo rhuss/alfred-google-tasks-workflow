@@ -9,6 +9,7 @@ import (
 	"html"
 	"net"
 	"net/http"
+	"os"
 	"time"
 
 	"golang.org/x/oauth2"
@@ -165,8 +166,9 @@ func RunOAuthFlow(config *oauth2.Config) (*oauth2.Token, error) {
 	}()
 
 	// Open browser (will be called by the workflow command handler)
-	// Return the URL for the caller to open
-	fmt.Printf("Opening browser for authentication...\n")
+	// Return the URL for the caller to open.
+	// Write status to stderr so it never corrupts Alfred's JSON stdout.
+	fmt.Fprintln(os.Stderr, "Opening browser for authentication...")
 	if browserErr := openBrowser(authURL); browserErr != nil {
 		listener.Close()
 		return nil, fmt.Errorf("opening browser: %w", browserErr)
