@@ -1,0 +1,12 @@
+{
+  "enabledMcpjsonServers": [
+    "playwright",
+    "google-private",
+    "google-work",
+    "jira-redhat-old",
+    "oreilly",
+    "personal-rag",
+    "readwise",
+    "slack-redhat"
+  ]
+}
