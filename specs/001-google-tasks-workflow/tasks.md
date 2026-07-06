@@ -127,8 +127,8 @@
 **Purpose**: Final quality, documentation, packaging
 
 - [ ] T038 [P] Add README.md with setup instructions (Google Cloud project, credentials, installation), usage examples, and build instructions
-- [ ] T039 [P] Add error handling for network failures, API rate limits, and invalid API responses across all command handlers
-- [ ] T040 Verify end-to-end workflow: build binary, package .alfredworkflow, test all commands in Alfred
+- [ ] T039 [P] Harden error handling in command handlers: (1) in internal/tasks/client.go, wrap all API calls with a helper that detects HTTP 429 (rate limit) and returns a user-friendly "Rate limit reached, try again in a moment" error; (2) in internal/tasks/client.go, detect network errors (timeout, DNS, connection refused) and return "No internet connection" message; (3) in internal/alfred/workflow.go, add a top-level error handler that converts all error types to Alfred items with appropriate icons and messages; (4) in internal/auth/token.go, handle invalid_grant errors during refresh by deleting the stored token and returning "Session expired, run gt login again"
+- [ ] T040 Verify end-to-end workflow: build binary, package .alfredworkflow, test all commands in Alfred. Validate NFR thresholds: (1) measure task creation round-trip time (target < 2s from Enter to notification), (2) measure task listing time (target < 3s from keystroke to displayed results), (3) verify single binary with `file` and `otool -L` (no dynamic deps beyond system libs), (4) verify first-use auth completes within 2 minutes (excluding Google Cloud setup)
 
 ---
 

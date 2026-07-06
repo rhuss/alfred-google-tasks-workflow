@@ -70,6 +70,73 @@ icon.png                  # Workflow icon
 
 **Structure Decision**: Single Go module with `cmd/` entry point and `internal/` packages. The `internal/` directory enforces that packages are not importable by external code. Packages are organized by domain responsibility: `auth` for OAuth, `tasks` for API operations, `dateparse` for date extraction, `input` for user input parsing, and `alfred` for Alfred-specific integrations.
 
+## Global Constraints
+
+These constraints apply to every task implicitly. Copied verbatim from the spec:
+
+- **Language**: Go 1.22+ (current stable version)
+- **Binary**: Single compiled binary with zero runtime dependencies beyond Alfred 5
+- **Platform**: macOS only (Alfred is macOS-only)
+- **Distribution**: Single `.alfredworkflow` zip file
+- **Alfred**: Alfred 5 with Powerpack required
+- **OAuth Scope**: `https://www.googleapis.com/auth/tasks` (read-write)
+- **Storage Location**: `~/Library/Application Support/Alfred/Workflow Data/{bundleID}`
+- **Performance**: Task creation < 2s, task listing < 3s
+
+## Key Interfaces
+
+Cross-task interfaces for implementers who read only their own task:
+
+### `internal/auth/credentials.go`
+```go
+func LoadClientCredentials(dataDir string) (*oauth2.Config, error)
+```
+
+### `internal/auth/token.go`
+```go
+func LoadToken(dataDir string) (*oauth2.Token, error)
+func SaveToken(dataDir string, token *oauth2.Token) error
+func DeleteToken(dataDir string) error
+func EnsureValidToken(dataDir string, config *oauth2.Config) (*oauth2.Token, error)
+```
+
+### `internal/auth/oauth.go`
+```go
+func RunOAuthFlow(config *oauth2.Config) (*oauth2.Token, error)
+```
+
+### `internal/tasks/client.go`
+```go
+func NewClient(token *oauth2.Token, config *oauth2.Config) (*Client, error)
+func (c *Client) ListTaskLists() ([]*tasks.TaskList, error)
+func (c *Client) CreateTaskList(title string) (*tasks.TaskList, error)
+func (c *Client) ListTasks(listID string) ([]*tasks.Task, error)
+func (c *Client) InsertTask(listID string, task *tasks.Task) (*tasks.Task, error)
+func (c *Client) CompleteTask(listID, taskID string) error
+func (c *Client) DeleteTask(listID, taskID string) error
+```
+
+### `internal/dateparse/dateparse.go`
+```go
+func Parse(input string, relativeTo time.Time) (time.Time, bool)
+```
+
+### `internal/input/parser.go`
+```go
+type ParsedInput struct {
+    Title    string
+    Date     *time.Time
+    ListName string
+}
+func Parse(input string) ParsedInput
+```
+
+### `internal/alfred/notifications.go`
+```go
+func NotifySuccess(wf *aw.Workflow, message string)
+func NotifyError(wf *aw.Workflow, message string)
+```
+
 ## Complexity Tracking
 
 No constitution violations to justify.
