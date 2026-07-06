@@ -23,7 +23,9 @@ func notify(title, message, sound string) {
 	}
 
 	cmd := exec.Command("osascript", "-e", script)
-	_ = cmd.Start()
+	if err := cmd.Start(); err == nil {
+		go cmd.Wait()
+	}
 }
 
 // escapeAppleScript escapes special characters for AppleScript strings.
