@@ -92,7 +92,7 @@
 	<key>readme</key>
 	<string>Manage Google Tasks without leaving Alfred.
 
-SETUP: Create a Google Cloud project, enable Tasks API, create a Desktop OAuth client, download client_secret.json, and place it in ~/Library/Application Support/Alfred/Workflow Data/com.rhuss.gtasks/. Then type "gt login" to authenticate. Full instructions: https://github.com/rhuss/alfred-google-tasks-workflow
+SETUP: Create a Google Cloud project, enable Tasks API, create a Desktop OAuth client, download client_secret.json. Then run: mkdir -p ~/Library/Application\ Support/Alfred/Workflow\ Data/com.rhuss.gtasks/ and copy client_secret.json there. Type "gt login" to authenticate. Full instructions: https://github.com/rhuss/alfred-google-tasks-workflow
 
 COMMANDS:
 gt login - Authenticate with Google
