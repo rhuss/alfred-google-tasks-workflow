@@ -6,13 +6,14 @@ Last updated: 2026-07-06
 
 | # | Date | Topic | Status | Spec | Issue |
 |---|------|-------|--------|------|-------|
-| 01 | 2026-07-06 | alfred-google-tasks | active | - | - |
+| 01 | 2026-07-06 | alfred-google-tasks | spec-created | 001 | - |
+| 02 | 2026-07-06 | multi-account | active | - | - |
 
 ## Open Threads
-- Should task listing cache results locally or always fetch from API? (from #01)
-- What should the default task list be when user has multiple lists? (from #01)
-- Should `gt logout` be a command to revoke tokens? (from #01)
-- Should tasks without a due date be shown, and under which group? (from #01)
+- Should `gt accounts` be a command that lists configured accounts and their auth status? (from #02)
+- How to handle missing credentials for a configured account? (from #02)
+- Should merged list view visually distinguish accounts with colors or text labels? (from #02)
+- Should separate keyword info.plist entries be auto-generated or manual? (from #02)
 
 ## Parked Ideas
 (none)
