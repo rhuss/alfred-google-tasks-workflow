@@ -109,6 +109,7 @@ func RunOAuthFlow(config *oauth2.Config) (*oauth2.Token, error) {
 		oauth2.AccessTypeOffline,
 		oauth2.SetAuthURLParam("code_challenge", codeChallenge),
 		oauth2.SetAuthURLParam("code_challenge_method", "S256"),
+		oauth2.SetAuthURLParam("prompt", "select_account"),
 	)
 
 	// Channel to receive the auth code or error
