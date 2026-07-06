@@ -22,9 +22,21 @@ type Workflow struct {
 // NewWorkflow creates a new Alfred workflow wrapper.
 func NewWorkflow() *Workflow {
 	wf := aw.New()
+	dataDir := wf.DataDir()
+
+	if credDir := os.Getenv("CREDENTIALS_DIR"); credDir != "" {
+		expanded := credDir
+		if len(expanded) > 0 && expanded[0] == '~' {
+			if home, err := os.UserHomeDir(); err == nil {
+				expanded = home + expanded[1:]
+			}
+		}
+		dataDir = expanded
+	}
+
 	return &Workflow{
 		WF:      wf,
-		DataDir: wf.DataDir(),
+		DataDir: dataDir,
 	}
 }
 
