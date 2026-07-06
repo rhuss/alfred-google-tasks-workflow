@@ -2,6 +2,7 @@ package tasks
 
 import (
 	"sort"
+	"strings"
 	"time"
 
 	taskapi "google.golang.org/api/tasks/v1"
@@ -69,6 +70,9 @@ func (c *Client) FetchAllTasks() ([]TaskItem, error) {
 			return nil, err
 		}
 		for _, task := range tasks {
+			if strings.TrimSpace(task.Title) == "" {
+				continue
+			}
 			allItems = append(allItems, TaskItem{
 				Task:     task,
 				ListName: list.Title,
@@ -97,6 +101,9 @@ func (c *Client) FetchTasksFromList(listName string) ([]TaskItem, error) {
 
 	var items []TaskItem
 	for _, task := range tasks {
+		if strings.TrimSpace(task.Title) == "" {
+			continue
+		}
 		items = append(items, TaskItem{
 			Task:     task,
 			ListName: list.Title,
