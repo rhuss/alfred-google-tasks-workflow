@@ -9,6 +9,7 @@ import (
 	aw "github.com/deanishe/awgo"
 
 	"github.com/rhuss/alfred-google-tasks-workflow/internal/auth"
+	"github.com/rhuss/alfred-google-tasks-workflow/internal/input"
 	"github.com/rhuss/alfred-google-tasks-workflow/internal/tasks"
 )
 
@@ -51,6 +52,8 @@ func (w *Workflow) route(args []string) {
 	case "logout":
 		w.handleLogout()
 	case "add":
+		w.handleAddPreview(strings.Join(remaining, " "))
+	case "create":
 		w.handleAdd(remaining)
 	case "list":
 		w.handleList(remaining)
@@ -105,7 +108,7 @@ func (w *Workflow) handleFilter(args []string) {
 	case query == "open":
 		w.handleOpen()
 	case len(query) >= 4 && query[:4] == "add ":
-		w.handleAdd([]string{query[4:]})
+		w.handleAddPreview(query[4:])
 	case len(query) >= 5 && query[:5] == "list ":
 		w.handleList([]string{strings.TrimSpace(query[5:])})
 	case query == "list" || query == "":
@@ -197,6 +200,43 @@ func (w *Workflow) handleLogout() {
 		return
 	}
 	NotifySuccess("Google Tasks", "Logged out successfully")
+	w.WF.SendFeedback()
+}
+
+// handleAddPreview shows a preview of the task to be created.
+// The actual creation happens when the user presses Enter (via the "create" command).
+func (w *Workflow) handleAddPreview(rawInput string) {
+	rawInput = strings.TrimSpace(rawInput)
+	if rawInput == "" {
+		w.WF.NewItem("Type a task description").
+			Subtitle("Example: Buy groceries, tomorrow #Shopping").
+			Icon(iconComplete).
+			Valid(false)
+		w.WF.SendFeedback()
+		return
+	}
+
+	parsed := input.ParseWithTime(rawInput, time.Now())
+
+	title := parsed.Title
+	if title == "" {
+		title = rawInput
+	}
+
+	subtitle := "Press Enter to create"
+	if parsed.Date != nil {
+		subtitle += fmt.Sprintf(" (due %s)", parsed.Date.Format("2006-01-02"))
+	}
+	if parsed.ListName != "" {
+		subtitle += fmt.Sprintf(" in \"%s\"", parsed.ListName)
+	}
+
+	w.WF.NewItem(title).
+		Subtitle(subtitle).
+		Arg("create:" + rawInput).
+		Icon(iconComplete).
+		Valid(true)
+
 	w.WF.SendFeedback()
 }
 
@@ -318,6 +358,13 @@ func (w *Workflow) handleAction(args []string) {
 	}
 
 	actionArg := args[0]
+
+	// Handle task creation (from add preview)
+	if strings.HasPrefix(actionArg, "create:") {
+		w.handleAdd([]string{actionArg[7:]})
+		return
+	}
+
 	parts := strings.SplitN(actionArg, ":", 3)
 
 	// If only 2 parts (listID:taskID), show the action sub-menu
