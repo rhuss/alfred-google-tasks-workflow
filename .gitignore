@@ -4,3 +4,28 @@
 **/.specify/**
 !**/.specify/memory/
 !**/.specify/memory/constitution.md
+
+# Go
+*.exe
+*.test
+*.out
+vendor/
+
+# Build artifacts
+gtasks
+*.alfredworkflow
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.tmp
+
+# Credentials (NEVER commit)
+client_secret.json
+token.json
+.mcp.json
