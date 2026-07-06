@@ -1,7 +1,7 @@
 # Brainstorm: Alfred Google Tasks Workflow
 
 **Date:** 2026-07-06
-**Status:** active
+**Status:** spec-created
 
 ## Problem Framing
 
