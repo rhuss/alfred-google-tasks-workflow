@@ -139,7 +139,7 @@ A user wants to disconnect their Google account from the workflow. They type the
 - **FR-004**: System MUST automatically refresh expired access tokens using the stored refresh token without user interaction
 - **FR-005**: System MUST create Google Tasks with a title and optional due date via the Google Tasks API
 - **FR-006**: System MUST parse natural language dates from task input: "today", "tomorrow", "next week", weekday names ("Monday" through "Sunday"), ISO dates ("YYYY-MM-DD"), and short dates ("MM-DD")
-- **FR-007**: System MUST extract dates from either the beginning or end of the task title, with comma separation supported
+- **FR-007**: System MUST extract dates from either the beginning or end of the task title, with comma separation supported. If no recognized date pattern is matched, the entire input MUST be treated as the task title with no due date
 - **FR-008**: System MUST support `#ListName` syntax to specify a target task list, creating the list if it does not exist
 - **FR-009**: System MUST list tasks grouped by timeframe sections: Overdue, Today, This Week (next 7 days), Later, and No Date
 - **FR-010**: System MUST display each task with its title, due date, and parent list name
@@ -171,6 +171,23 @@ A user wants to disconnect their Google account from the workflow. They type the
 - **SC-004**: Natural date parsing correctly interprets all supported date formats ("today", "tomorrow", "next week", weekday names, ISO dates, short dates) with 100% accuracy for the defined pattern set
 - **SC-005**: The workflow operates as a single compiled binary with zero runtime dependencies beyond Alfred itself
 - **SC-006**: Token refresh happens transparently, so users authenticate once and never need to re-authenticate unless they revoke access
+
+## Dependencies
+
+- **Google Tasks API v1**: REST API for task and task list CRUD operations
+- **Alfred 5 with Powerpack**: macOS launcher providing workflow execution, Script Filter UI, and notification system
+- **Go compiler**: Current stable version, for building the single-binary workflow
+- **macOS**: Target platform (Alfred is macOS-only)
+
+## Out of Scope (v1)
+
+- Subtask creation or hierarchy management
+- Recurring/repeating tasks
+- Task editing or renaming after creation
+- Multi-account support (only one Google account at a time)
+- Offline mode or local caching
+- Task notes or descriptions
+- Drag-and-drop reordering
 
 ## Assumptions
 
