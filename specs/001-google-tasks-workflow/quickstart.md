@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - macOS with Alfred 5 and Powerpack
-- Go 1.22+ installed
+- Go 1.26+ installed
 - A Google Cloud project with the Tasks API enabled
 
 ## Setup Google Cloud Credentials

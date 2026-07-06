@@ -69,7 +69,7 @@ func ParseWithTime(input string, now time.Time) ParsedInput {
 	// Try "next week" (two-word date phrase) first
 	words := strings.Fields(remaining)
 	if len(words) >= 3 {
-		twoWordDate := strings.Join(words[:2], " ")
+		twoWordDate := strings.TrimRight(strings.Join(words[:2], " "), ",")
 		if date, ok := dateparse.Parse(twoWordDate, now); ok {
 			result.Date = &date
 			result.Title = strings.TrimSpace(strings.Join(words[2:], " "))
@@ -77,11 +77,18 @@ func ParseWithTime(input string, now time.Time) ParsedInput {
 		}
 	}
 
-	// Try single leading word as date
+	// Try single leading word as date (strip trailing comma for cases like "tomorrow, call John")
 	if len(words) >= 2 {
-		if date, ok := dateparse.Parse(words[0], now); ok {
+		leadingWord := strings.TrimRight(words[0], ",")
+		if date, ok := dateparse.Parse(leadingWord, now); ok {
 			result.Date = &date
-			result.Title = strings.TrimSpace(strings.Join(words[1:], " "))
+			titleWords := words[1:]
+			if words[0] != leadingWord {
+				// comma was stripped, trim leading comma from remaining title
+				result.Title = strings.TrimSpace(strings.TrimLeft(strings.Join(titleWords, " "), ","))
+			} else {
+				result.Title = strings.TrimSpace(strings.Join(titleWords, " "))
+			}
 			return result
 		}
 	}

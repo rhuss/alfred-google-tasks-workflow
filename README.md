@@ -16,7 +16,7 @@ An Alfred 5 workflow for managing Google Tasks directly from your launcher. Crea
 
 ## Prerequisites
 
-1. **Go 1.22+** installed
+1. **Go 1.26+** installed
 2. **Alfred 5** with Powerpack license
 3. **Google Cloud Project** with Tasks API enabled
 

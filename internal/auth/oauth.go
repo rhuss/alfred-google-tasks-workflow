@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
+	"html"
 	"net"
 	"net/http"
 	"time"
@@ -127,7 +128,7 @@ func RunOAuthFlow(config *oauth2.Config) (*oauth2.Token, error) {
 				errDesc = queryErr
 			}
 			w.Header().Set("Content-Type", "text/html")
-			fmt.Fprintf(w, errorHTML, errDesc)
+			fmt.Fprintf(w, errorHTML, html.EscapeString(errDesc))
 			resultCh <- authResult{err: fmt.Errorf("OAuth error: %s", errDesc)}
 			return
 		}

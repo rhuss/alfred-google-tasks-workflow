@@ -153,6 +153,7 @@ func (w *Workflow) handleLogin() {
 	}
 
 	NotifySuccess("Google Tasks", "Successfully authenticated!")
+	w.WF.SendFeedback()
 }
 
 // requireAuth checks if the user is authenticated and shows an error item if not.
@@ -194,6 +195,7 @@ func (w *Workflow) handleLogout() {
 		return
 	}
 	NotifySuccess("Google Tasks", "Logged out successfully")
+	w.WF.SendFeedback()
 }
 
 // handleAdd creates a new task from the input.
@@ -231,7 +233,7 @@ func (w *Workflow) handleAdd(args []string) {
 	}
 
 	subtitle := fmt.Sprintf("Added to %s", listName)
-	if created.Due != "" {
+	if len(created.Due) >= 10 {
 		subtitle += fmt.Sprintf(" (due %s)", created.Due[:10])
 	}
 	NotifySuccess("Google Tasks", fmt.Sprintf("Created: %s\n%s", created.Title, subtitle))

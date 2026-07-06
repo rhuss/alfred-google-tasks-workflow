@@ -9,7 +9,7 @@ Build an Alfred workflow for managing Google Tasks, implemented as a single comp
 
 ## Technical Context
 
-**Language/Version**: Go 1.22+
+**Language/Version**: Go 1.26+
 **Primary Dependencies**: AwGo (github.com/deanishe/awgo), google-api-go-client (google.golang.org/api/tasks/v1), golang.org/x/oauth2
 **Storage**: JSON files in Alfred's workflow data directory (`~/Library/Application Support/Alfred/Workflow Data/{bundleID}`)
 **Testing**: `go test ./...`
@@ -74,7 +74,7 @@ icon.png                  # Workflow icon
 
 These constraints apply to every task implicitly. Copied verbatim from the spec:
 
-- **Language**: Go 1.22+ (current stable version)
+- **Language**: Go 1.26+ (current stable version)
 - **Binary**: Single compiled binary with zero runtime dependencies beyond Alfred 5
 - **Platform**: macOS only (Alfred is macOS-only)
 - **Distribution**: Single `.alfredworkflow` zip file
