@@ -92,20 +92,34 @@
 	<key>readme</key>
 	<string>Manage Google Tasks without leaving Alfred.
 
-SETUP: Create a Google Cloud project, enable Tasks API, create a Desktop OAuth client, download client_secret.json. Then run: mkdir -p ~/Library/Application\ Support/Alfred/Workflow\ Data/com.rhuss.gtasks/ and copy client_secret.json there. Type "gt login" to authenticate. Full instructions: https://github.com/rhuss/alfred-google-tasks-workflow
+## Setup
 
-COMMANDS:
-gt login - Authenticate with Google
-gt add Buy groceries, tomorrow - Create task with due date
-gt add Call dentist, friday #Work - Create task in specific list
-gt list - Show tasks grouped by timeframe
-gt list #Work - Filter by list
-gt open - Open Google Tasks in browser
-gt logout - Disconnect account
+1. Create a Google Cloud project and enable the **Tasks API**
+2. Create a **Desktop** OAuth client and download `client_secret.json`
+3. Run in Terminal:
+`mkdir -p ~/Library/Application\ Support/Alfred/Workflow\ Data/com.rhuss.gtasks/`
+`cp client_secret.json ~/Library/Application\ Support/Alfred/Workflow\ Data/com.rhuss.gtasks/`
+4. Type `gt login` in Alfred to authenticate
 
-DATES: today, tomorrow, monday-sunday, next week, 2026-07-15, 07-15
+Full instructions: [README](https://github.com/rhuss/alfred-google-tasks-workflow)
 
-LISTS: Add #ListName at the end. Lists are auto-created if new. Hyphens/underscores become spaces (#My-List = "My List").</string>
+## Commands
+
+- `gt login` — Authenticate with Google
+- `gt add Buy groceries, tomorrow` — Create task with due date
+- `gt add Call dentist, friday #Work` — Create task in specific list
+- `gt list` — Show tasks grouped by timeframe
+- `gt list #Work` — Filter by list
+- `gt open` — Open Google Tasks in browser
+- `gt logout` — Disconnect account
+
+## Dates
+
+Supported: **today**, **tomorrow**, **monday**–**sunday**, **next week**, **2026-07-15**, **07-15**
+
+## Lists
+
+Add `#ListName` at the end to target a list. Lists are auto-created if new. Hyphens and underscores become spaces: `#My-List` = "My List".</string>
 	<key>uidata</key>
 	<dict/>
 	<key>version</key>
