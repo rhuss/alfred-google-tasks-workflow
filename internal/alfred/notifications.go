@@ -1,9 +1,7 @@
 package alfred
 
 import (
-	"context"
 	"os/exec"
-	"time"
 )
 
 // NotifySuccess shows a macOS notification for a successful operation.
@@ -24,11 +22,8 @@ func notify(title, message, sound string) {
 		script += ` sound name "` + sound + `"`
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	go func() {
-		defer cancel()
-		_ = exec.CommandContext(ctx, "osascript", "-e", script).Run()
-	}()
+	cmd := exec.Command("osascript", "-e", script)
+	_ = cmd.Start()
 }
 
 // escapeAppleScript escapes special characters for AppleScript strings.
