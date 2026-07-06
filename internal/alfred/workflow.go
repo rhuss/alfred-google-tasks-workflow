@@ -365,23 +365,27 @@ func (w *Workflow) handleAction(args []string) {
 		return
 	}
 
-	parts := strings.SplitN(actionArg, ":", 3)
-
-	// If only 2 parts (listID:taskID), show the action sub-menu
-	if len(parts) == 2 {
-		w.RenderActionMenu(actionArg)
+	// Handle action execution (format: action|listID:taskID)
+	if strings.Contains(actionArg, "|") {
+		pipeParts := strings.SplitN(actionArg, "|", 2)
+		action := pipeParts[0]
+		idParts := strings.SplitN(pipeParts[1], ":", 2)
+		if len(idParts) != 2 {
+			NotifyError("Google Tasks", "Invalid action format")
+			return
+		}
+		listID := idParts[0]
+		taskID := idParts[1]
+		w.executeAction(action, listID, taskID)
 		return
 	}
 
-	// 3 parts: action:listID:taskID
-	if len(parts) != 3 {
-		NotifyError("Google Tasks", "Invalid action format")
-		return
-	}
+	// No pipe separator: this is a task selection (format: listID:taskID:title)
+	// Show the action sub-menu
+	w.RenderActionMenu(actionArg)
+}
 
-	action := parts[0]
-	listID := parts[1]
-	taskID := parts[2]
+func (w *Workflow) executeAction(action, listID, taskID string) {
 
 	// "open" action doesn't need auth
 	if action == "open" {

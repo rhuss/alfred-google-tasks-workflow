@@ -2,6 +2,7 @@ package alfred
 
 import (
 	"fmt"
+	"strings"
 
 	aw "github.com/deanishe/awgo"
 
@@ -51,7 +52,7 @@ func (w *Workflow) RenderGroupedTasks(grouped tasks.GroupedTasks) {
 
 		for _, item := range group.Tasks {
 			subtitle := buildSubtitle(group.Label, item)
-			arg := fmt.Sprintf("%s:%s", item.ListID, item.Task.Id)
+			arg := fmt.Sprintf("%s:%s:%s", item.ListID, item.Task.Id, item.Task.Title)
 
 			w.WF.NewItem(item.Task.Title).
 				Subtitle(subtitle).
@@ -75,21 +76,29 @@ func buildSubtitle(groupLabel string, item tasks.TaskItem) string {
 }
 
 func (w *Workflow) RenderActionMenu(taskArg string) {
+	// taskArg format: listID:taskID:title
+	// Extract listID:taskID for action args
+	parts := strings.SplitN(taskArg, ":", 3)
+	actionRef := taskArg
+	if len(parts) >= 2 {
+		actionRef = parts[0] + ":" + parts[1]
+	}
+
 	w.WF.NewItem("Complete Task").
 		Subtitle("Mark this task as done").
-		Arg("complete:" + taskArg).
+		Arg("complete|" + actionRef).
 		Icon(iconComplete).
 		Valid(true)
 
 	w.WF.NewItem("Delete Task").
 		Subtitle("Permanently delete this task").
-		Arg("delete:" + taskArg).
+		Arg("delete|" + actionRef).
 		Icon(iconDelete).
 		Valid(true)
 
 	w.WF.NewItem("Open in Browser").
 		Subtitle("Open Google Tasks in your browser").
-		Arg("open:" + taskArg).
+		Arg("open|" + actionRef).
 		Icon(iconOpen).
 		Valid(true)
 
