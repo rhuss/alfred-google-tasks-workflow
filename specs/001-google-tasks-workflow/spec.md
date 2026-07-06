@@ -96,6 +96,21 @@ A user wants to switch to the full Google Tasks interface for more complex task 
 
 ---
 
+### User Story 6 - Account Logout (Priority: P3)
+
+A user wants to disconnect their Google account from the workflow. They type the logout command, stored tokens are deleted, and they receive a confirmation.
+
+**Why this priority**: Account management is a hygiene feature. Users rarely need it but it must exist.
+
+**Independent Test**: Can be fully tested by running logout and verifying tokens are removed and subsequent commands prompt for re-authentication.
+
+**Acceptance Scenarios**:
+
+1. **Given** the user is authenticated, **When** they type `gt logout`, **Then** stored OAuth tokens are deleted and a confirmation notification is shown
+2. **Given** the user is not authenticated, **When** they type `gt logout`, **Then** the workflow shows a message indicating no account is connected
+
+---
+
 ### Edge Cases
 
 - What happens when the local OAuth server times out waiting for the callback? The workflow should show a timeout error after 3 minutes and clean up the server.
@@ -104,6 +119,15 @@ A user wants to switch to the full Google Tasks interface for more complex task 
 - What happens when the user has no task lists at all? The workflow should handle this gracefully and create a default list on first task creation.
 - What happens when a `#ListName` tag contains spaces? The workflow should support multi-word list names using `#My-List` or `#My_List` syntax with hyphens or underscores replacing spaces.
 - What happens when the date text is ambiguous (e.g., "next week" on a Sunday)? The workflow should consistently interpret "next week" as next Monday.
+
+## Clarifications
+
+### Session 2026-07-06
+
+- Q: Should task listing cache API results for faster display? → A: No caching in v1. Always fetch fresh from API on each `gt list` invocation. Keeps implementation simple and ensures data is always current.
+- Q: What happens when user types `gt` with no subcommand? → A: Equivalent to `gt list`. Viewing tasks is the most common action and provides immediate value.
+- Q: Should a `gt logout` command be included? → A: Yes. `gt logout` deletes stored tokens from the workflow data directory and shows a confirmation notification. Users need a way to disconnect their account.
+- Q: How should action confirmations be displayed? → A: Via macOS notifications using Alfred's built-in notification system (brief, non-blocking). Applies to task creation, completion, and deletion confirmations.
 
 ## Requirements
 
@@ -125,6 +149,10 @@ A user wants to switch to the full Google Tasks interface for more complex task 
 - **FR-014**: System MUST open the Google Tasks web UI in the default browser via the `gt open` command
 - **FR-015**: System MUST show clear error messages when credentials are missing, authentication fails, or API calls fail
 - **FR-016**: System MUST use the `https://www.googleapis.com/auth/tasks` OAuth scope for read-write access
+- **FR-017**: System MUST treat `gt` with no subcommand as equivalent to `gt list`
+- **FR-018**: System MUST provide a `gt logout` command that deletes stored OAuth tokens and shows a confirmation notification
+- **FR-019**: System MUST display action confirmations (task created, completed, deleted) as macOS notifications via Alfred's notification system
+- **FR-020**: System MUST fetch task data fresh from the Google Tasks API on each listing request (no local caching in v1)
 
 ### Key Entities
 
