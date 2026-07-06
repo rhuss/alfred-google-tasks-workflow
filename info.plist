@@ -103,23 +103,37 @@ See the README for detailed setup instructions:
 https://github.com/rhuss/alfred-google-tasks-workflow
 
 COMMANDS
-  gt login                          Authenticate with Google
-  gt add &lt;task&gt;                     Create a task
-  gt add &lt;task&gt;, tomorrow           Create with a due date
-  gt add &lt;task&gt;, friday #Shopping   Create in a specific list
-  gt list                           Show tasks by timeframe
-  gt list #Work                     Show tasks from one list
-  gt open                           Open Google Tasks in browser
-  gt logout                         Disconnect your account
 
-DATES
-  today, tomorrow, monday-sunday, next week,
-  2026-07-15 (ISO), 07-15 (month-day)
+  gt login
+    Authenticate with Google
+
+  gt add Buy groceries, tomorrow
+    Create a task with a due date
+
+  gt add Call dentist, friday #Work
+    Create a task in a specific list
+
+  gt list
+    Show all tasks grouped by timeframe
+
+  gt list #Work
+    Show tasks from one list only
+
+  gt open
+    Open Google Tasks in your browser
+
+  gt logout
+    Disconnect your Google account
+
+SUPPORTED DATES
+  today, tomorrow, monday through sunday,
+  next week, 2026-07-15, 07-15
 
 LISTS
-  Add #ListName at the end to target a list.
-  Lists are created automatically if they don't exist.
-  Hyphens/underscores become spaces: #My-List = "My List"</string>
+  Add #ListName at the end to pick a list.
+  New lists are created automatically.
+  Hyphens and underscores become spaces:
+  #My-List becomes "My List"</string>
 	<key>uidata</key>
 	<dict/>
 	<key>version</key>
