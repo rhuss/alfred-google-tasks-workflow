@@ -235,7 +235,7 @@ Add `#ListName` at the end to target a list. Lists are auto-created if new. Hyph
 				<true/>
 			</dict>
 			<key>description</key>
-			<string>Directory containing client_secret.json. Leave empty to use the default Alfred workflow data directory.</string>
+			<string>Directory containing client_secret.json. Default: ~/Library/Application Support/Alfred/Workflow Data/com.rhuss.gtasks/</string>
 			<key>label</key>
 			<string>Credentials Directory</string>
 			<key>type</key>
