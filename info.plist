@@ -90,7 +90,36 @@
 		</dict>
 	</array>
 	<key>readme</key>
-	<string>Google Tasks workflow for Alfred. Type 'gt' followed by a command to manage your tasks.</string>
+	<string>Google Tasks workflow for Alfred. Manage your tasks without leaving Alfred.
+
+SETUP
+  1. Create a Google Cloud project and enable the Tasks API
+  2. Create a Desktop OAuth client and download client_secret.json
+  3. Place client_secret.json in the workflow data directory:
+     ~/Library/Application Support/Alfred/Workflow Data/com.rhuss.gtasks/
+  4. Type "gt login" to authenticate
+
+See the README for detailed setup instructions:
+https://github.com/rhuss/alfred-google-tasks-workflow
+
+COMMANDS
+  gt login                          Authenticate with Google
+  gt add &lt;task&gt;                     Create a task
+  gt add &lt;task&gt;, tomorrow           Create with a due date
+  gt add &lt;task&gt;, friday #Shopping   Create in a specific list
+  gt list                           Show tasks by timeframe
+  gt list #Work                     Show tasks from one list
+  gt open                           Open Google Tasks in browser
+  gt logout                         Disconnect your account
+
+DATES
+  today, tomorrow, monday-sunday, next week,
+  2026-07-15 (ISO), 07-15 (month-day)
+
+LISTS
+  Add #ListName at the end to target a list.
+  Lists are created automatically if they don't exist.
+  Hyphens/underscores become spaces: #My-List = "My List"</string>
 	<key>uidata</key>
 	<dict/>
 	<key>version</key>
