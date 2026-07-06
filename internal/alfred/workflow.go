@@ -380,9 +380,15 @@ func (w *Workflow) handleAction(args []string) {
 		return
 	}
 
-	// No pipe separator: this is a task selection (format: listID:taskID:title)
-	// Show the action sub-menu
-	w.RenderActionMenu(actionArg)
+	// No pipe separator: this is a task selection from the list
+	// Read listID and taskID from Alfred workflow variables (set on items)
+	listID := os.Getenv("listID")
+	taskID := os.Getenv("taskID")
+	if listID == "" || taskID == "" {
+		NotifyError("Google Tasks", "Could not identify task")
+		return
+	}
+	w.RenderActionMenu(listID, taskID)
 }
 
 func (w *Workflow) executeAction(action, listID, taskID string) {
