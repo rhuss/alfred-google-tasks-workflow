@@ -148,7 +148,7 @@ func DefaultContext(dataDir string) *AccountContext {
 		Name:            "",
 		DataDir:         dataDir,
 		CredentialsPath: filepath.Join(dataDir, credentialsFile),
-		ProfileIndex:    0,
+		ProfileIndex:    -1,
 	}
 }
 

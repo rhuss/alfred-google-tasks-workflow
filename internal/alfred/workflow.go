@@ -52,8 +52,41 @@ func NewWorkflow() *Workflow {
 	}
 
 	if accountConfig != nil {
-		// Multi-account mode: check if invoked via a per-account keyword
+		// Apply Alfred config overrides from environment variables
+		if envDefault := os.Getenv("DEFAULT_ACCOUNT"); envDefault != "" {
+			accountConfig.Default = envDefault
+		}
+		if envListDefault := os.Getenv("LIST_DEFAULT"); envListDefault != "" {
+			accountConfig.ListDefault = envListDefault
+		}
+
 		w.AccountConfig = accountConfig
+
+		// Quick-add: resolve account by name from QUICK_ADD_ACCOUNT env var
+		if accountName := os.Getenv("QUICK_ADD_ACCOUNT"); accountName != "" {
+			ctx, err := auth.ResolveAccount(accountConfig, accountName)
+			if err != nil {
+				w.AccountCtx = auth.DefaultContext(dataDir)
+				w.configErr = err
+				return w
+			}
+			w.AccountCtx = ctx
+			w.accountTargeted = true
+			return w
+		}
+
+		// Item var propagation: accountName set on Script Filter items
+		// and propagated by Alfred to downstream Run Script actions
+		if accountName := os.Getenv("accountName"); accountName != "" {
+			ctx, err := auth.ResolveAccount(accountConfig, accountName)
+			if err == nil {
+				w.AccountCtx = ctx
+				w.accountTargeted = true
+				return w
+			}
+		}
+
+		// Per-account keyword from accounts.json
 		if keyword := os.Getenv("ACCOUNT_KEYWORD"); keyword != "" {
 			if acct := accountConfig.FindAccountByKeyword(keyword); acct != nil {
 				ctx, err := auth.ResolveAccount(accountConfig, acct.Name)
@@ -119,8 +152,12 @@ func (w *Workflow) route(args []string) {
 
 	// In multi-account mode, check if the first arg is an @accountname.
 	// Skip if account was already resolved via keyword (accountTargeted).
+	// Alfred's Script Filter may pass the entire query as a single arg
+	// (e.g., "@work login"), so split on space to extract just the account name.
 	if w.AccountConfig != nil && !w.accountTargeted && len(args) > 0 && strings.HasPrefix(args[0], "@") {
-		accountName := args[0][1:]
+		firstArg := args[0]
+		parts := strings.SplitN(firstArg[1:], " ", 2)
+		accountName := parts[0]
 		if accountName == "" {
 			w.showAccountList()
 			return
@@ -132,7 +169,12 @@ func (w *Workflow) route(args []string) {
 		}
 		w.AccountCtx = ctx
 		w.accountTargeted = true
-		args = args[1:] // strip the @accountname arg
+		// Rebuild args: replace first arg with remainder after @account
+		if len(parts) > 1 && parts[1] != "" {
+			args = append([]string{parts[1]}, args[1:]...)
+		} else {
+			args = args[1:]
+		}
 		if len(args) == 0 {
 			w.showHelp()
 			return
@@ -144,9 +186,9 @@ func (w *Workflow) route(args []string) {
 
 	switch command {
 	case "login":
-		w.handleLogin()
+		w.showLoginPreview()
 	case "logout":
-		w.handleLogout()
+		w.showCommandPreview("Logout", "Remove stored credentials", "cmd:logout")
 	case "add":
 		w.handleAddPreview(strings.Join(remaining, " "))
 	case "create":
@@ -154,7 +196,7 @@ func (w *Workflow) route(args []string) {
 	case "list":
 		w.handleList(remaining)
 	case "open":
-		w.handleOpen()
+		w.showCommandPreview("Open Google Tasks", "Open in your browser", "cmd:open")
 	case "action":
 		w.handleAction(remaining)
 	default:
@@ -172,23 +214,22 @@ func (w *Workflow) showHelp() {
 
 	w.WF.NewItem(prefix + " login").
 		Subtitle("Authenticate with Google Tasks").
-		Arg("login").
+		Arg("cmd:login").
 		Valid(true)
 	w.WF.NewItem(prefix + " add <task>").
 		Subtitle("Add a new task (supports dates and #ListName)").
-		Arg("add").
 		Valid(false)
 	w.WF.NewItem(prefix + " list").
 		Subtitle("List your tasks grouped by timeframe").
-		Arg("list").
+		Arg("cmd:list").
 		Valid(true)
 	w.WF.NewItem(prefix + " open").
 		Subtitle("Open Google Tasks in your browser").
-		Arg("open").
+		Arg("cmd:open").
 		Valid(true)
 	w.WF.NewItem(prefix + " logout").
 		Subtitle("Remove stored credentials").
-		Arg("logout").
+		Arg("cmd:logout").
 		Valid(true)
 
 	// In multi-account mode, show the @account syntax hint
@@ -295,14 +336,18 @@ func (w *Workflow) handleFilter(args []string) {
 		return // error was displayed
 	}
 
-	// Route based on query prefix
+	// Route based on query prefix.
+	// Commands that perform actions (login, logout, open) are shown as
+	// preview items with a cmd: prefix. Pressing Enter routes them through
+	// the Conditional to the run-create Run Script, which executes them.
+	// This prevents actions from running while the user is still typing.
 	switch {
 	case query == "login":
-		w.handleLogin()
+		w.showLoginPreview()
 	case query == "logout":
-		w.handleLogout()
+		w.showCommandPreview("Logout", "Remove stored credentials", "cmd:logout")
 	case query == "open":
-		w.handleOpen()
+		w.showCommandPreview("Open Google Tasks", "Open in your browser", "cmd:open")
 	case len(query) >= 4 && query[:4] == "add ":
 		w.handleAddPreview(query[4:])
 	case len(query) >= 5 && query[:5] == "list ":
@@ -312,6 +357,31 @@ func (w *Workflow) handleFilter(args []string) {
 	default:
 		w.handleList([]string{query})
 	}
+}
+
+func (w *Workflow) showLoginPreview() {
+	if auth.TokenExists(w.AccountCtx.DataDir) {
+		w.WF.NewItem("Already authenticated").
+			Subtitle("Run 'gt logout' first to re-authenticate").
+			Icon(aw.IconInfo).
+			Valid(false)
+	} else {
+		w.WF.NewItem("Login to Google Tasks").
+			Subtitle("Press Enter to start authentication").
+			Arg("cmd:login").
+			Icon(iconComplete).
+			Valid(true)
+	}
+	w.WF.SendFeedback()
+}
+
+func (w *Workflow) showCommandPreview(title, subtitle, arg string) {
+	w.WF.NewItem(title).
+		Subtitle(subtitle).
+		Arg(arg).
+		Icon(iconComplete).
+		Valid(true)
+	w.WF.SendFeedback()
 }
 
 // handleLogin initiates the OAuth flow.
@@ -361,14 +431,15 @@ func (w *Workflow) handleLogin() {
 // Returns true if authenticated, false if not.
 func (w *Workflow) requireAuth() bool {
 	if !auth.TokenExists(w.AccountCtx.DataDir) {
-		loginHint := "Run 'gt login' to connect your Google account"
+		loginHint := "Press Enter to connect your Google account"
 		if w.AccountConfig != nil && w.AccountCtx.Name != "" {
-			loginHint = fmt.Sprintf("Run 'gt @%s login' to authenticate this account", w.AccountCtx.Name)
+			loginHint = fmt.Sprintf("Press Enter to authenticate the %s account", w.AccountCtx.Name)
 		}
 		w.WF.NewItem("Not authenticated").
 			Subtitle(loginHint).
+			Arg("cmd:login").
 			Icon(aw.IconError).
-			Valid(false)
+			Valid(true)
 		w.WF.SendFeedback()
 		return false
 	}
@@ -684,7 +755,8 @@ func (w *Workflow) handleAction(args []string) {
 	// This must run before any action dispatch (including create:).
 	w.resolveAccountFromEnv()
 
-	// Handle task creation (from add preview)
+	// Task creation is routed to the run-create Run Script via the Conditional.
+	// This fallback handles it if the routing doesn't match.
 	if strings.HasPrefix(actionArg, "create:") {
 		w.handleAdd([]string{actionArg[7:]})
 		return

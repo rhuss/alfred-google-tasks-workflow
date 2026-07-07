@@ -208,8 +208,8 @@ func TestDefaultContext(t *testing.T) {
 	if ctx.CredentialsPath != expectedCred {
 		t.Errorf("expected CredentialsPath %q, got %q", expectedCred, ctx.CredentialsPath)
 	}
-	if ctx.ProfileIndex != 0 {
-		t.Errorf("expected ProfileIndex 0, got %d", ctx.ProfileIndex)
+	if ctx.ProfileIndex != -1 {
+		t.Errorf("expected ProfileIndex -1 (no authuser), got %d", ctx.ProfileIndex)
 	}
 }
 
