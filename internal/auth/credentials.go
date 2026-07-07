@@ -20,12 +20,17 @@ const (
 // given data directory. Returns an oauth2.Config configured for the desktop
 // OAuth flow with the Google Tasks scope.
 func LoadClientCredentials(dataDir string) (*oauth2.Config, error) {
-	path := filepath.Join(dataDir, credentialsFile)
+	return LoadClientCredentialsFrom(filepath.Join(dataDir, credentialsFile))
+}
 
+// LoadClientCredentialsFrom reads and parses credentials from an explicit file path.
+// This supports multi-account mode where each account may have a different
+// credentials file location.
+func LoadClientCredentialsFrom(path string) (*oauth2.Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("credentials file not found: %s\nDownload client_secret.json from Google Cloud Console and place it in:\n  %s", path, dataDir)
+			return nil, fmt.Errorf("credentials file not found: %s\nDownload %s from Google Cloud Console and place it at:\n  %s", path, filepath.Base(path), path)
 		}
 		return nil, fmt.Errorf("reading credentials file: %w", err)
 	}

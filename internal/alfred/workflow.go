@@ -15,8 +15,11 @@ import (
 
 // Workflow wraps the AwGo workflow instance and provides command routing.
 type Workflow struct {
-	WF      *aw.Workflow
-	DataDir string
+	WF              *aw.Workflow
+	AccountCtx      *auth.AccountContext
+	AccountConfig   *auth.AccountConfig // nil in single-account mode
+	configErr       error               // non-nil if accounts.json exists but is invalid
+	accountTargeted bool                // true if user explicitly used @accountname
 }
 
 // NewWorkflow creates a new Alfred workflow wrapper.
@@ -34,10 +37,54 @@ func NewWorkflow() *Workflow {
 		dataDir = expanded
 	}
 
-	return &Workflow{
-		WF:      wf,
-		DataDir: dataDir,
+	w := &Workflow{
+		WF: wf,
 	}
+
+	// Try to load multi-account configuration
+	accountConfig, err := auth.LoadAccountConfig(dataDir)
+	if err != nil {
+		// Config exists but is invalid; store the error for later display.
+		// Use DefaultContext so the workflow can still show error items.
+		w.AccountCtx = auth.DefaultContext(dataDir)
+		w.configErr = err
+		return w
+	}
+
+	if accountConfig != nil {
+		// Multi-account mode: check if invoked via a per-account keyword
+		w.AccountConfig = accountConfig
+		if keyword := os.Getenv("ACCOUNT_KEYWORD"); keyword != "" {
+			if acct := accountConfig.FindAccountByKeyword(keyword); acct != nil {
+				ctx, err := auth.ResolveAccount(accountConfig, acct.Name)
+				if err != nil {
+					w.AccountCtx = auth.DefaultContext(dataDir)
+					w.configErr = err
+					return w
+				}
+				w.AccountCtx = ctx
+				w.accountTargeted = true
+				return w
+			}
+			w.AccountCtx = auth.DefaultContext(dataDir)
+			w.configErr = fmt.Errorf("keyword %q does not match any account in accounts.json", keyword)
+			return w
+		}
+
+		// Resolve the default account
+		ctx, err := auth.ResolveAccount(accountConfig, "")
+		if err != nil {
+			w.AccountCtx = auth.DefaultContext(dataDir)
+			w.configErr = err
+			return w
+		}
+		w.AccountCtx = ctx
+	} else {
+		// Single-account mode: no accounts.json found
+		w.AccountCtx = auth.DefaultContext(dataDir)
+	}
+
+	return w
 }
 
 // Run starts the workflow and routes to the appropriate command handler.
@@ -50,9 +97,46 @@ func (w *Workflow) Run(args []string) {
 
 // route dispatches to the correct command handler based on arguments.
 func (w *Workflow) route(args []string) {
+	// If accounts.json exists but is invalid, show the error to the user
+	// instead of proceeding with any command.
+	if w.configErr != nil {
+		w.WF.NewItem("Account configuration error").
+			Subtitle(w.configErr.Error()).
+			Icon(aw.IconError).
+			Valid(false)
+		w.WF.NewItem("Fix accounts.json in workflow data directory").
+			Subtitle("Delete or correct the file, then try again").
+			Icon(aw.IconInfo).
+			Valid(false)
+		w.WF.SendFeedback()
+		return
+	}
+
 	if len(args) == 0 {
 		w.showHelp()
 		return
+	}
+
+	// In multi-account mode, check if the first arg is an @accountname.
+	// Skip if account was already resolved via keyword (accountTargeted).
+	if w.AccountConfig != nil && !w.accountTargeted && len(args) > 0 && strings.HasPrefix(args[0], "@") {
+		accountName := args[0][1:]
+		if accountName == "" {
+			w.showAccountList()
+			return
+		}
+		ctx, err := auth.ResolveAccount(w.AccountConfig, accountName)
+		if err != nil {
+			w.showUnknownAccountError(accountName)
+			return
+		}
+		w.AccountCtx = ctx
+		w.accountTargeted = true
+		args = args[1:] // strip the @accountname arg
+		if len(args) == 0 {
+			w.showHelp()
+			return
+		}
 	}
 
 	command := args[0]
@@ -81,26 +165,120 @@ func (w *Workflow) route(args []string) {
 
 // showHelp displays available commands as Alfred items.
 func (w *Workflow) showHelp() {
-	w.WF.NewItem("gt login").
+	prefix := "gt"
+	if w.AccountConfig != nil && w.AccountCtx.Name != "" && w.accountTargeted {
+		prefix = fmt.Sprintf("gt @%s", w.AccountCtx.Name)
+	}
+
+	w.WF.NewItem(prefix + " login").
 		Subtitle("Authenticate with Google Tasks").
 		Arg("login").
 		Valid(true)
-	w.WF.NewItem("gt add <task>").
+	w.WF.NewItem(prefix + " add <task>").
 		Subtitle("Add a new task (supports dates and #ListName)").
 		Arg("add").
 		Valid(false)
-	w.WF.NewItem("gt list").
+	w.WF.NewItem(prefix + " list").
 		Subtitle("List your tasks grouped by timeframe").
 		Arg("list").
 		Valid(true)
-	w.WF.NewItem("gt open").
+	w.WF.NewItem(prefix + " open").
 		Subtitle("Open Google Tasks in your browser").
 		Arg("open").
 		Valid(true)
-	w.WF.NewItem("gt logout").
+	w.WF.NewItem(prefix + " logout").
 		Subtitle("Remove stored credentials").
 		Arg("logout").
 		Valid(true)
+
+	// In multi-account mode, show the @account syntax hint
+	if w.AccountConfig != nil && !w.accountTargeted {
+		w.WF.NewItem("gt @<account> <command>").
+			Subtitle("Target a specific account (e.g., gt @work list)").
+			Icon(aw.IconAccount).
+			Valid(false)
+	}
+
+	w.WF.SendFeedback()
+}
+
+// extractAccountPrefix checks for an @accountname prefix in the query string.
+// In multi-account mode, if the first token starts with @, it is treated as an
+// account selector. The account is resolved and set on the Workflow, and the
+// cleaned query (without the @prefix) is returned.
+// Returns the cleaned query and true if routing should continue, or false if
+// an error was displayed and routing should stop.
+func (w *Workflow) extractAccountPrefix(query string) (string, bool) {
+	// Only process @ prefix in multi-account mode, and skip if account
+	// was already resolved via keyword (accountTargeted).
+	if w.AccountConfig == nil || w.accountTargeted {
+		return query, true
+	}
+
+	query = strings.TrimSpace(query)
+	if !strings.HasPrefix(query, "@") {
+		return query, true
+	}
+
+	// Extract the account name (first token after @)
+	rest := query[1:] // strip leading @
+	parts := strings.SplitN(rest, " ", 2)
+	accountName := parts[0]
+
+	if accountName == "" {
+		// Bare "@" with nothing after it: show available accounts
+		w.showAccountList()
+		return "", false
+	}
+
+	// Resolve the account
+	ctx, err := auth.ResolveAccount(w.AccountConfig, accountName)
+	if err != nil {
+		// Unknown account name: show error with valid options
+		w.showUnknownAccountError(accountName)
+		return "", false
+	}
+
+	// Update the workflow's account context
+	w.AccountCtx = ctx
+	w.accountTargeted = true
+
+	// Return the remaining query after the @accountname
+	if len(parts) > 1 {
+		return strings.TrimSpace(parts[1]), true
+	}
+	return "", true
+}
+
+// showAccountList displays all configured account names as Alfred items.
+func (w *Workflow) showAccountList() {
+	names := w.AccountConfig.AccountNames()
+	for _, name := range names {
+		subtitle := "Use @" + name + " to target this account"
+		if name == w.AccountConfig.Default || (w.AccountConfig.Default == "" && name == names[0]) {
+			subtitle += " (default)"
+		}
+		w.WF.NewItem("@" + name).
+			Subtitle(subtitle).
+			Icon(aw.IconAccount).
+			Valid(false)
+	}
+	w.WF.SendFeedback()
+}
+
+// showUnknownAccountError displays an error for an unrecognized @accountname
+// and lists valid account names.
+func (w *Workflow) showUnknownAccountError(name string) {
+	w.WF.NewItem(fmt.Sprintf("Unknown account: %s", name)).
+		Subtitle("Valid accounts are listed below").
+		Icon(aw.IconError).
+		Valid(false)
+	for _, n := range w.AccountConfig.AccountNames() {
+		w.WF.NewItem("@" + n).
+			Subtitle("Use @" + n + " to target this account").
+			Icon(aw.IconAccount).
+			Valid(false)
+	}
 	w.WF.SendFeedback()
 }
 
@@ -109,6 +287,12 @@ func (w *Workflow) handleFilter(args []string) {
 	query := ""
 	if len(args) > 0 {
 		query = args[0]
+	}
+
+	// In multi-account mode, extract @accountname prefix
+	query, ok := w.extractAccountPrefix(query)
+	if !ok {
+		return // error was displayed
 	}
 
 	// Route based on query prefix
@@ -133,7 +317,7 @@ func (w *Workflow) handleFilter(args []string) {
 // handleLogin initiates the OAuth flow.
 func (w *Workflow) handleLogin() {
 	// Check if already authenticated
-	if auth.TokenExists(w.DataDir) {
+	if auth.TokenExists(w.AccountCtx.DataDir) {
 		w.WF.NewItem("Already authenticated").
 			Subtitle("Run 'gt logout' first to re-authenticate").
 			Icon(aw.IconInfo).
@@ -143,7 +327,7 @@ func (w *Workflow) handleLogin() {
 	}
 
 	// Load client credentials
-	config, err := auth.LoadClientCredentials(w.DataDir)
+	config, err := auth.LoadClientCredentialsFrom(w.AccountCtx.CredentialsPath)
 	if err != nil {
 		w.WF.NewItem("Setup Required").
 			Subtitle("Place client_secret.json in workflow data directory").
@@ -163,7 +347,7 @@ func (w *Workflow) handleLogin() {
 	}
 
 	// Save the token
-	if err := auth.SaveToken(w.DataDir, token); err != nil {
+	if err := auth.SaveToken(w.AccountCtx.DataDir, token); err != nil {
 		NotifyError("Google Tasks", fmt.Sprintf("Failed to save token: %v", err))
 		fmt.Fprintf(os.Stderr, "save token error: %v\n", err)
 		return
@@ -176,9 +360,13 @@ func (w *Workflow) handleLogin() {
 // requireAuth checks if the user is authenticated and shows an error item if not.
 // Returns true if authenticated, false if not.
 func (w *Workflow) requireAuth() bool {
-	if !auth.TokenExists(w.DataDir) {
+	if !auth.TokenExists(w.AccountCtx.DataDir) {
+		loginHint := "Run 'gt login' to connect your Google account"
+		if w.AccountConfig != nil && w.AccountCtx.Name != "" {
+			loginHint = fmt.Sprintf("Run 'gt @%s login' to authenticate this account", w.AccountCtx.Name)
+		}
 		w.WF.NewItem("Not authenticated").
-			Subtitle("Run 'gt login' to connect your Google account").
+			Subtitle(loginHint).
 			Icon(aw.IconError).
 			Valid(false)
 		w.WF.SendFeedback()
@@ -191,12 +379,12 @@ func (w *Workflow) requireAuth() bool {
 // the config and token needed to create an API client. Returns nil values
 // and sends error feedback if anything fails.
 func (w *Workflow) getAuthenticatedClient() (*auth.OAuthConfig, error) {
-	config, err := auth.LoadClientCredentials(w.DataDir)
+	config, err := auth.LoadClientCredentialsFrom(w.AccountCtx.CredentialsPath)
 	if err != nil {
 		return nil, fmt.Errorf("loading credentials: %w", err)
 	}
 
-	token, err := auth.EnsureValidToken(w.DataDir, config)
+	token, err := auth.EnsureValidToken(w.AccountCtx.DataDir, config)
 	if err != nil {
 		return nil, fmt.Errorf("validating token: %w", err)
 	}
@@ -206,7 +394,7 @@ func (w *Workflow) getAuthenticatedClient() (*auth.OAuthConfig, error) {
 
 // handleLogout removes stored credentials.
 func (w *Workflow) handleLogout() {
-	if err := auth.DeleteToken(w.DataDir); err != nil {
+	if err := auth.DeleteToken(w.AccountCtx.DataDir); err != nil {
 		NotifyError("Google Tasks", err.Error())
 		fmt.Fprintf(os.Stderr, "logout error: %v\n", err)
 		return
@@ -243,11 +431,15 @@ func (w *Workflow) handleAddPreview(rawInput string) {
 		subtitle += fmt.Sprintf(" in \"%s\"", parsed.ListName)
 	}
 
-	w.WF.NewItem(title).
+	item := w.WF.NewItem(title).
 		Subtitle(subtitle).
 		Arg("create:" + rawInput).
 		Icon(iconComplete).
 		Valid(true)
+
+	if w.AccountCtx != nil && w.AccountCtx.Name != "" {
+		item.Var("accountName", w.AccountCtx.Name)
+	}
 
 	w.WF.SendFeedback()
 }
@@ -296,32 +488,6 @@ func (w *Workflow) handleAdd(args []string) {
 // handleList displays tasks grouped by timeframe.
 // Supports optional #ListName filter in args.
 func (w *Workflow) handleList(args []string) {
-	if !w.requireAuth() {
-		return
-	}
-
-	authConfig, err := w.getAuthenticatedClient()
-	if err != nil {
-		w.WF.NewItem("Authentication error").
-			Subtitle(err.Error()).
-			Icon(aw.IconError).
-			Valid(false)
-		w.WF.SendFeedback()
-		fmt.Fprintf(os.Stderr, "auth error: %v\n", err)
-		return
-	}
-
-	client, err := tasks.NewClient(authConfig.Token, authConfig.Config)
-	if err != nil {
-		w.WF.NewItem("API client error").
-			Subtitle(err.Error()).
-			Icon(aw.IconError).
-			Valid(false)
-		w.WF.SendFeedback()
-		fmt.Fprintf(os.Stderr, "client error: %v\n", err)
-		return
-	}
-
 	// Check for #ListName filter in args
 	listFilter := ""
 	if len(args) > 0 {
@@ -333,12 +499,18 @@ func (w *Workflow) handleList(args []string) {
 		}
 	}
 
-	var items []tasks.TaskItem
-	if listFilter != "" {
-		items, err = client.FetchTasksFromList(listFilter)
-	} else {
-		items, err = client.FetchAllTasks()
+	// Determine if we should list from all accounts (merged listing)
+	if w.shouldListAllAccounts() {
+		w.handleListAllAccounts(listFilter)
+		return
 	}
+
+	// Single-account listing (default account, explicit @account, or single-account mode)
+	if !w.requireAuth() {
+		return
+	}
+
+	items, err := w.fetchTasksForCurrentAccount(listFilter)
 	if err != nil {
 		w.WF.NewItem("Failed to fetch tasks").
 			Subtitle(err.Error()).
@@ -353,9 +525,145 @@ func (w *Workflow) handleList(args []string) {
 	w.RenderGroupedTasks(grouped)
 }
 
+// shouldListAllAccounts returns true when the listing should merge tasks
+// from all configured accounts. This happens when:
+// - Multi-account mode is active (AccountConfig is loaded)
+// - list_default is "all"
+// - The user did not explicitly target an account with @prefix
+func (w *Workflow) shouldListAllAccounts() bool {
+	if w.AccountConfig == nil {
+		return false
+	}
+	if w.accountTargeted {
+		return false
+	}
+	return w.AccountConfig.ListDefault == "all"
+}
+
+// handleListAllAccounts fetches tasks from all configured accounts sequentially,
+// tags each task with its account name, and renders the merged result.
+func (w *Workflow) handleListAllAccounts(listFilter string) {
+	var allItems []tasks.TaskItem
+	var warnings []string
+
+	originalCtx := w.AccountCtx
+
+	for _, name := range w.AccountConfig.AccountNames() {
+		ctx, err := auth.ResolveAccount(w.AccountConfig, name)
+		if err != nil {
+			warnings = append(warnings, fmt.Sprintf("%s: config error", name))
+			continue
+		}
+
+		// Temporarily switch context to this account
+		w.AccountCtx = ctx
+
+		if !auth.TokenExists(ctx.DataDir) {
+			warnings = append(warnings, fmt.Sprintf("%s: not authenticated", name))
+			continue
+		}
+
+		items, err := w.fetchTasksForCurrentAccount(listFilter)
+		if err != nil {
+			warnings = append(warnings, fmt.Sprintf("%s: %v", name, err))
+			fmt.Fprintf(os.Stderr, "fetch tasks for %s: %v\n", name, err)
+			continue
+		}
+
+		// Tag each item with the account name
+		for i := range items {
+			items[i].AccountName = name
+		}
+
+		allItems = append(allItems, items...)
+	}
+
+	// Restore original context
+	w.AccountCtx = originalCtx
+
+	if len(allItems) == 0 && len(warnings) == 0 {
+		// No tasks and no warnings: show empty state via RenderGroupedTasks
+		grouped := tasks.GroupTasksByTimeframe(allItems, time.Now())
+		w.RenderGroupedTasks(grouped)
+		return
+	}
+
+	if len(allItems) == 0 && len(warnings) > 0 {
+		// Only warnings, no tasks: show warnings directly
+		for _, warning := range warnings {
+			w.WF.NewItem("Account warning").
+				Subtitle(warning).
+				Icon(aw.IconWarning).
+				Valid(false)
+		}
+		w.WF.SendFeedback()
+		return
+	}
+
+	// Has tasks: render them, then append any warnings.
+	// RenderGroupedTasks calls SendFeedback, so we add warnings before it.
+	grouped := tasks.GroupTasksByTimeframe(allItems, time.Now())
+	w.renderGroupedTasksWithWarnings(grouped, warnings)
+}
+
+// renderGroupedTasksWithWarnings renders grouped tasks and appends warning items
+// before calling SendFeedback. This avoids the double-SendFeedback issue that
+// would occur if we called RenderGroupedTasks followed by additional items.
+func (w *Workflow) renderGroupedTasksWithWarnings(grouped tasks.GroupedTasks, warnings []string) {
+	for _, group := range grouped.Groups {
+		icon := iconForTimeframe(group.Timeframe)
+
+		for _, item := range group.Tasks {
+			subtitle := buildSubtitle(group.Label, item)
+
+			it := w.WF.NewItem(item.Task.Title).
+				Subtitle(subtitle).
+				Arg(item.Task.Title).
+				Var("listID", item.ListID).
+				Var("taskID", item.Task.Id).
+				Icon(icon).
+				Valid(true)
+
+			// Propagate account name so action handlers can re-resolve
+			// the correct account context for merged-list tasks.
+			if item.AccountName != "" {
+				it.Var("accountName", item.AccountName)
+			}
+		}
+	}
+
+	for _, warning := range warnings {
+		w.WF.NewItem("Account warning").
+			Subtitle(warning).
+			Icon(aw.IconWarning).
+			Valid(false)
+	}
+
+	w.WF.SendFeedback()
+}
+
+// fetchTasksForCurrentAccount fetches tasks using the current AccountContext.
+// Optionally filters by list name. Returns tagged TaskItems.
+func (w *Workflow) fetchTasksForCurrentAccount(listFilter string) ([]tasks.TaskItem, error) {
+	authConfig, err := w.getAuthenticatedClient()
+	if err != nil {
+		return nil, fmt.Errorf("auth: %w", err)
+	}
+
+	client, err := tasks.NewClient(authConfig.Token, authConfig.Config)
+	if err != nil {
+		return nil, fmt.Errorf("api client: %w", err)
+	}
+
+	if listFilter != "" {
+		return client.FetchTasksFromList(listFilter)
+	}
+	return client.FetchAllTasks()
+}
+
 // handleOpen opens Google Tasks in the browser.
 func (w *Workflow) handleOpen() {
-	if err := tasks.OpenGoogleTasks(); err != nil {
+	if err := tasks.OpenGoogleTasks(w.AccountCtx.ProfileIndex); err != nil {
 		NotifyError("Google Tasks", fmt.Sprintf("Failed to open browser: %v", err))
 		fmt.Fprintf(os.Stderr, "open error: %v\n", err)
 		return
@@ -370,6 +678,11 @@ func (w *Workflow) handleAction(args []string) {
 	}
 
 	actionArg := args[0]
+
+	// In multi-account mode, re-resolve the account context from the
+	// accountName variable that was propagated through item vars.
+	// This must run before any action dispatch (including create:).
+	w.resolveAccountFromEnv()
 
 	// Handle task creation (from add preview)
 	if strings.HasPrefix(actionArg, "create:") {
@@ -400,14 +713,34 @@ func (w *Workflow) handleAction(args []string) {
 		NotifyError("Google Tasks", "Could not identify task")
 		return
 	}
-	w.RenderActionMenu(listID, taskID)
+	w.RenderActionMenu(listID, taskID, os.Getenv("accountName"))
+}
+
+// resolveAccountFromEnv checks for an accountName environment variable
+// (set via Alfred item vars on merged-list tasks) and re-resolves the
+// account context so that action handlers authenticate against the
+// correct account, not the default.
+func (w *Workflow) resolveAccountFromEnv() {
+	if w.AccountConfig == nil {
+		return
+	}
+	accountName := os.Getenv("accountName")
+	if accountName == "" {
+		return
+	}
+	ctx, err := auth.ResolveAccount(w.AccountConfig, accountName)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "resolving account %q from env: %v\n", accountName, err)
+		return
+	}
+	w.AccountCtx = ctx
 }
 
 func (w *Workflow) executeAction(action, listID, taskID string) {
 
 	// "open" action doesn't need auth
 	if action == "open" {
-		if err := tasks.OpenGoogleTasks(); err != nil {
+		if err := tasks.OpenGoogleTasks(w.AccountCtx.ProfileIndex); err != nil {
 			NotifyError("Google Tasks", fmt.Sprintf("Failed to open browser: %v", err))
 		}
 		return

@@ -52,13 +52,19 @@ func (w *Workflow) RenderGroupedTasks(grouped tasks.GroupedTasks) {
 		for _, item := range group.Tasks {
 			subtitle := buildSubtitle(group.Label, item)
 
-			w.WF.NewItem(item.Task.Title).
+			it := w.WF.NewItem(item.Task.Title).
 				Subtitle(subtitle).
 				Arg(item.Task.Title).
 				Var("listID", item.ListID).
 				Var("taskID", item.Task.Id).
 				Icon(icon).
 				Valid(true)
+
+			// Propagate account name so action handlers can re-resolve
+			// the correct account context for merged-list tasks.
+			if item.AccountName != "" {
+				it.Var("accountName", item.AccountName)
+			}
 		}
 	}
 
@@ -66,7 +72,12 @@ func (w *Workflow) RenderGroupedTasks(grouped tasks.GroupedTasks) {
 }
 
 func buildSubtitle(groupLabel string, item tasks.TaskItem) string {
-	subtitle := fmt.Sprintf("[%s] %s", groupLabel, item.ListName)
+	listPart := item.ListName
+	if item.AccountName != "" {
+		listPart += fmt.Sprintf(" (%s)", item.AccountName)
+	}
+
+	subtitle := fmt.Sprintf("[%s] %s", groupLabel, listPart)
 
 	if item.Task.Due != "" && len(item.Task.Due) >= 10 {
 		subtitle += fmt.Sprintf(" - due %s", item.Task.Due[:10])
@@ -75,26 +86,32 @@ func buildSubtitle(groupLabel string, item tasks.TaskItem) string {
 	return subtitle
 }
 
-func (w *Workflow) RenderActionMenu(listID, taskID string) {
+func (w *Workflow) RenderActionMenu(listID, taskID, accountName string) {
 	actionRef := listID + ":" + taskID
 
-	w.WF.NewItem("Complete Task").
+	completeItem := w.WF.NewItem("Complete Task").
 		Subtitle("Mark this task as done").
 		Arg("complete|" + actionRef).
 		Icon(iconComplete).
 		Valid(true)
 
-	w.WF.NewItem("Delete Task").
+	deleteItem := w.WF.NewItem("Delete Task").
 		Subtitle("Permanently delete this task").
 		Arg("delete|" + actionRef).
 		Icon(iconDelete).
 		Valid(true)
 
-	w.WF.NewItem("Open in Browser").
+	openItem := w.WF.NewItem("Open in Browser").
 		Subtitle("Open Google Tasks in your browser").
 		Arg("open|" + actionRef).
 		Icon(iconOpen).
 		Valid(true)
+
+	if accountName != "" {
+		completeItem.Var("accountName", accountName)
+		deleteItem.Var("accountName", accountName)
+		openItem.Var("accountName", accountName)
+	}
 
 	w.WF.SendFeedback()
 }

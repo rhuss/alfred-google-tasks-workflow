@@ -39,9 +39,10 @@ func TimeframeLabel(tf Timeframe) string {
 
 // TaskItem is an enriched task that includes the list name for display.
 type TaskItem struct {
-	Task     *taskapi.Task
-	ListName string
-	ListID   string
+	Task        *taskapi.Task
+	ListName    string
+	ListID      string
+	AccountName string // empty in single-account mode, set in multi-account
 }
 
 // GroupedTasks holds tasks organized by timeframe.

@@ -135,6 +135,86 @@ When viewing the task list, press Enter on a task to see the action menu:
 - **Delete Task**: permanently removes the task
 - **Open in Browser**: opens Google Tasks web UI
 
+## Multi-Account Support
+
+You can manage tasks across multiple Google accounts (e.g., personal and work). This is optional; the workflow works identically to before without any configuration.
+
+### Setup
+
+1. Create separate Google Cloud credentials for each account (follow the Google Cloud Setup above for each).
+
+2. Place each credentials file in the workflow data directory with a unique name:
+   ```bash
+   DATA_DIR=~/Library/Application\ Support/Alfred/Workflow\ Data/com.rhuss.gtasks
+   cp personal-credentials.json "$DATA_DIR/personal.json"
+   cp work-credentials.json "$DATA_DIR/work.json"
+   ```
+
+3. Create `accounts.json` in the same directory:
+   ```json
+   {
+     "default": "personal",
+     "list_default": "all",
+     "accounts": {
+       "personal": {
+         "credentials": "personal.json"
+       },
+       "work": {
+         "credentials": "work.json",
+         "authuser": 1
+       }
+     }
+   }
+   ```
+
+### Configuration Reference
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `default` | string | Yes | Name of the default account |
+| `list_default` | string | No | `"default"` (show default account only) or `"all"` (merge all accounts). Default: `"default"` |
+| `accounts.<name>.credentials` | string | Yes | Path to credentials file (relative to data directory) |
+| `accounts.<name>.authuser` | int | No | Google multi-login index for browser opening (0-based) |
+| `accounts.<name>.keyword` | string | No | Dedicated Alfred keyword for this account |
+
+### Usage with Multiple Accounts
+
+**Target a specific account** with the `@` prefix:
+
+| Command | Description |
+|---------|-------------|
+| `gt @work list` | List tasks from work account |
+| `gt @personal add Buy milk` | Add task to personal account |
+| `gt @work open` | Open Google Tasks for work profile |
+| `gt @work login` | Authenticate the work account |
+
+**Merged listing**: When `list_default` is `"all"`, typing `gt list` shows tasks from all authenticated accounts. Each task's subtitle shows its account name in parentheses (e.g., `[Today] Inbox (work)`).
+
+**Default account**: Commands without `@` prefix use the default account (unless `list_default` is `"all"` for the `list` command).
+
+**Account selector**: Type `gt @` to see a list of all configured accounts.
+
+### Per-Account Keywords (Optional)
+
+You can configure a dedicated Alfred keyword for an account so you can type `gtw list` instead of `gt @work list`.
+
+1. Add a `keyword` field to the account in `accounts.json`:
+   ```json
+   {
+     "default": "personal",
+     "accounts": {
+       "work": {
+         "credentials": "work.json",
+         "keyword": "gtw"
+       }
+     }
+   }
+   ```
+
+2. In Alfred's workflow editor, duplicate the existing Script Filter and change its keyword to `gtw`. In the Script Filter's script, add `export ACCOUNT_KEYWORD="gtw"` before the binary invocation. This tells the workflow which account to use.
+
+When a keyword-specific Script Filter is active, any `@` prefix in the input is ignored (the keyword already identifies the account).
+
 ## Troubleshooting
 
 **"Setup Required" when running gt login**
