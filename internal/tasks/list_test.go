@@ -168,6 +168,40 @@ func TestGroupTasksByTimeframeNoDatesAlphabetical(t *testing.T) {
 	}
 }
 
+func TestGroupTasksByTimeframe_AccountNamePreserved(t *testing.T) {
+	items := []TaskItem{
+		{Task: &taskapi.Task{Title: "Work task", Due: "2026-07-01T00:00:00Z"}, ListName: "Inbox", ListID: "l1", AccountName: "work"},
+		{Task: &taskapi.Task{Title: "Personal task", Due: "2026-07-01T00:00:00Z"}, ListName: "Inbox", ListID: "l2", AccountName: "personal"},
+		{Task: &taskapi.Task{Title: "Single-acct task", Due: "2026-07-01T00:00:00Z"}, ListName: "Inbox", ListID: "l3"},
+	}
+
+	grouped := GroupTasksByTimeframe(items, refNow)
+
+	if len(grouped.Groups) != 1 {
+		t.Fatalf("expected 1 group (Today), got %d", len(grouped.Groups))
+	}
+
+	group := grouped.Groups[0]
+	if len(group.Tasks) != 3 {
+		t.Fatalf("expected 3 tasks, got %d", len(group.Tasks))
+	}
+
+	// Verify AccountName is preserved through grouping
+	found := map[string]bool{}
+	for _, task := range group.Tasks {
+		found[task.AccountName] = true
+	}
+	if !found["work"] {
+		t.Error("expected AccountName 'work' to be preserved")
+	}
+	if !found["personal"] {
+		t.Error("expected AccountName 'personal' to be preserved")
+	}
+	if !found[""] {
+		t.Error("expected empty AccountName (single-account) to be preserved")
+	}
+}
+
 func TestTimeframeLabel(t *testing.T) {
 	tests := []struct {
 		tf       Timeframe
