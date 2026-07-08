@@ -1,13 +1,15 @@
 # Alfred Google Tasks Workflow
 
-An Alfred 5 workflow for managing Google Tasks directly from your launcher. Create tasks with smart date parsing, view tasks grouped by timeframe, and manage them with quick actions.
+An [Alfred 5](https://www.alfredapp.com/) workflow for managing Google Tasks without leaving your launcher. Create tasks with natural dates, view them grouped by timeframe, and manage multiple Google accounts.
 
 ## Features
 
-- **Quick task creation** with natural language dates and list targeting
+- **Quick task creation** with natural language dates (`tomorrow`, `friday`, `next week`) and list targeting (`#Shopping`)
 - **Task listing** grouped by Overdue, Today, This Week, Later, No Date
-- **Task actions**: complete, delete, or open tasks from a sub-menu
-- **List filtering**: view tasks from a specific list with `#ListName`
+- **Task actions**: complete, delete, or open in browser from a sub-menu
+- **Multi-account support**: manage tasks across personal and work Google accounts
+- **Quick-add keywords**: configurable shortcuts (`gta`, `gtp`) for adding tasks to specific accounts
+- **Hotkey trigger**: assign a keyboard shortcut for instant task creation
 - **Auto-create lists**: reference a list that doesn't exist and it gets created
 - **Secure OAuth 2.0** with PKCE, tokens stored locally
 
@@ -20,7 +22,7 @@ An Alfred 5 workflow for managing Google Tasks directly from your launcher. Crea
 
 ### From Source
 
-Requires Go 1.26+.
+Requires Go 1.22+.
 
 ```bash
 git clone https://github.com/rhuss/alfred-google-tasks-workflow.git
@@ -56,7 +58,7 @@ You need your own Google Cloud credentials. This is a one-time setup that takes 
 5. On **Test users**, click **Add Users** and add your Google email
 6. Click **Save and Continue**, then **Back to Dashboard**
 
-**Important**: Go to **OAuth consent screen** > **Publishing status** and click **Publish App**. This changes the status to "In production" and prevents your refresh token from expiring every 7 days. Verification is not required for personal use (you'll see a warning screen once during login, which is normal).
+> **Note:** Go to **OAuth consent screen** > **Publishing status** and click **Publish App** to change the status to "In production". This prevents your refresh token from expiring every 7 days. Verification is not required for personal use. You'll see a warning screen once during login, which is normal.
 
 ### 4. Create OAuth Credentials
 
@@ -81,7 +83,7 @@ cp client_secret.json ~/Library/Application\ Support/Alfred/Workflow\ Data/com.r
 
 ### First-Time Login
 
-Type `gt login` in Alfred. Your browser opens to Google's consent screen. Grant permission and you'll see "Authenticated! You can close this tab." Return to Alfred.
+Type `gt login` in Alfred. Your browser opens to Google's consent screen. Grant permission and you'll see "Authenticated! You can close this tab."
 
 ### Commands
 
@@ -109,7 +111,7 @@ Dates can appear at the beginning or end of the task title, optionally separated
 | `2026-07-15` | Exact date (ISO format) |
 | `07-15` | July 15 of the current year (or next year if passed) |
 
-**Examples**:
+**Examples:**
 ```
 gt add Buy groceries, tomorrow          # "Buy groceries" due tomorrow
 gt add Monday Review PR                 # "Review PR" due next Monday
@@ -137,7 +139,7 @@ When viewing the task list, press Enter on a task to see the action menu:
 
 ## Multi-Account Support
 
-You can manage tasks across multiple Google accounts (e.g., personal and work). This is optional; the workflow works identically to before without any configuration.
+Manage tasks across multiple Google accounts (e.g., personal and work). This is optional. Without any configuration, the workflow behaves as a single-account setup.
 
 ### Setup
 
@@ -167,7 +169,7 @@ You can manage tasks across multiple Google accounts (e.g., personal and work). 
    }
    ```
 
-### Configuration Reference
+### accounts.json Reference
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
@@ -177,7 +179,7 @@ You can manage tasks across multiple Google accounts (e.g., personal and work). 
 | `accounts.<name>.authuser` | int | No | Google multi-login index for browser opening (0-based) |
 | `accounts.<name>.keyword` | string | No | Dedicated Alfred keyword for this account |
 
-### Usage with Multiple Accounts
+### Using Multiple Accounts
 
 **Target a specific account** with the `@` prefix:
 
@@ -192,28 +194,46 @@ You can manage tasks across multiple Google accounts (e.g., personal and work). 
 
 **Default account**: Commands without `@` prefix use the default account (unless `list_default` is `"all"` for the `list` command).
 
-**Account selector**: Type `gt @` to see a list of all configured accounts.
+**Account selector**: Type `gt @` to see all configured accounts.
 
-### Per-Account Keywords (Optional)
+### Quick-Add Keywords
 
-You can configure a dedicated Alfred keyword for an account so you can type `gtw list` instead of `gt @work list`.
+The workflow includes two configurable quick-add keywords for fast task creation on specific accounts. Instead of typing `gt @work add Buy milk`, you type `gta Buy milk`.
 
-1. Add a `keyword` field to the account in `accounts.json`:
-   ```json
-   {
-     "default": "personal",
-     "accounts": {
-       "work": {
-         "credentials": "work.json",
-         "keyword": "gtw"
-       }
-     }
-   }
-   ```
+Configure them in Alfred's workflow settings (click the `[x]` button in the workflow editor):
 
-2. In Alfred's workflow editor, duplicate the existing Script Filter and change its keyword to `gtw`. In the Script Filter's script, add `export ACCOUNT_KEYWORD="gtw"` before the binary invocation. This tells the workflow which account to use.
+| Setting | Default | Description |
+|---------|---------|-------------|
+| Quick Add 1 Keyword | `gta` | Alfred keyword for quick-adding to account 1 |
+| Quick Add 1 Account | *(empty)* | Account name from `accounts.json` (e.g., `work`) |
+| Quick Add 2 Keyword | `gtp` | Alfred keyword for quick-adding to account 2 |
+| Quick Add 2 Account | *(empty)* | Account name from `accounts.json` (e.g., `personal`) |
 
-When a keyword-specific Script Filter is active, any `@` prefix in the input is ignored (the keyword already identifies the account).
+Quick-add keywords support the full syntax: dates, `#ListName`, everything that `gt add` supports.
+
+### Hotkey
+
+The workflow includes a Hotkey trigger node connected to Quick Add 1. To set it up:
+
+1. Open Alfred Preferences > Workflows > Google Tasks
+2. Double-click the Hotkey node (empty white box, bottom-left)
+3. Record your preferred keyboard shortcut
+
+Pressing the shortcut opens Alfred with the quick-add keyword, ready for you to type a task.
+
+## Workflow Settings
+
+All settings are accessible via the `[x]` button in Alfred's workflow editor.
+
+| Setting | Description |
+|---------|-------------|
+| Credentials Directory | Custom path for `accounts.json` and `client_secret.json`. Defaults to `~/Library/Application Support/Alfred/Workflow Data/com.rhuss.gtasks/` |
+| Default Account | Override the default account from `accounts.json` |
+| Task Listing Mode | "Default account only" or "All accounts (merged)" |
+| Quick Add 1 Keyword | Alfred keyword for quick-add slot 1 (default: `gta`) |
+| Quick Add 1 Account | Account name for quick-add slot 1 |
+| Quick Add 2 Keyword | Alfred keyword for quick-add slot 2 (default: `gtp`) |
+| Quick Add 2 Account | Account name for quick-add slot 2 |
 
 ## Troubleshooting
 
@@ -231,16 +251,17 @@ This is normal for personal-use apps. Click **Advanced** > **Go to Alfred Tasks 
 The workflow only shows incomplete tasks. Completed tasks are hidden. Also check that you're looking at the right list (try `gt list` without a filter to see all lists).
 
 **Build errors**
-Make sure you have Go 1.26+ installed: `go version`. If using an older Go, update via `brew install go` or from [go.dev](https://go.dev/dl/).
+Make sure you have Go 1.22+ installed: `go version`. If using an older Go, update via `brew install go` or from [go.dev](https://go.dev/dl/).
 
 ## Development
 
 ```bash
-make build      # Build the binary
-make test       # Run all 67 tests
-make clean      # Remove build artifacts
-make package    # Create .alfredworkflow file
-make install    # Build, package, and open in Alfred
+make build                    # Build the binary
+make test                     # Run tests
+make clean                    # Remove build artifacts
+make package                  # Create .alfredworkflow file
+make install                  # Build, package, and open in Alfred
+make release VERSION=v1.2.0   # Tag, push, and create GitHub release
 ```
 
 ## License
