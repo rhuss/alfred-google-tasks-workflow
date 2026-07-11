@@ -433,6 +433,8 @@ Full instructions: [README](https://github.com/rhuss/alfred-google-tasks-workflo
 
 Supported: **today**, **tomorrow**, **monday**–**sunday**, **next week**, **2026-07-15**, **07-15**
 
+German: **heute**, **morgen**, **uebermorgen**, **montag**–**sonntag**, **naechste woche**
+
 ## Lists
 
 Add `#ListName` at the end to target a list. Lists are auto-created if new. Hyphens and underscores become spaces: `#My-List` = "My List".</string>
@@ -651,7 +653,7 @@ Add `#ListName` at the end to target a list. Lists are auto-created if new. Hyph
 		</dict>
 	</array>
 	<key>version</key>
-	<string>1.0.0</string>
+	<string>1.3.0</string>
 	<key>webaddress</key>
 	<string>https://github.com/rhuss/alfred-google-tasks-workflow</string>
 </dict>
