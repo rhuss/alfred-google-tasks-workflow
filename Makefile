@@ -27,6 +27,7 @@ package: build
 	@echo "Created $(WORKFLOW)"
 
 install: package
+	xattr -cr $(WORKFLOW)
 	open $(WORKFLOW)
 
 release: package
