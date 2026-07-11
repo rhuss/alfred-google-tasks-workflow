@@ -18,11 +18,7 @@ An [Alfred 5](https://www.alfredapp.com/) workflow for managing Google Tasks wit
 ### From GitHub Release
 
 1. Download `alfred-google-tasks.alfredworkflow` from the [latest release](https://github.com/rhuss/alfred-google-tasks-workflow/releases/latest)
-2. Remove the macOS quarantine flag (required for unsigned binaries):
-   ```bash
-   xattr -cr ~/Downloads/alfred-google-tasks.alfredworkflow
-   ```
-3. Double-click the file to install in Alfred
+2. Double-click the file to install in Alfred
 
 ### From Source
 

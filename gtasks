@@ -1,0 +1,10 @@
+#!/bin/bash
+DIR="$(cd "$(dirname "$0")" && pwd)"
+BIN="$DIR/gtasks-bin"
+
+# Strip macOS quarantine flag on first run (set by Gatekeeper on downloaded files)
+if xattr -p com.apple.quarantine "$BIN" &>/dev/null; then
+  xattr -d com.apple.quarantine "$BIN" 2>/dev/null
+fi
+
+exec "$BIN" "$@"
