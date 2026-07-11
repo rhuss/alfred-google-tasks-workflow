@@ -79,6 +79,35 @@ func TestParseNextWeekOnMonday(t *testing.T) {
 	}
 }
 
+func TestParseGermanKeywords(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected time.Time
+	}{
+		{"heute", time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)},
+		{"Heute", time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)},
+		{"morgen", time.Date(2026, 7, 2, 0, 0, 0, 0, time.UTC)},
+		{"Morgen", time.Date(2026, 7, 2, 0, 0, 0, 0, time.UTC)},
+		{"uebermorgen", time.Date(2026, 7, 3, 0, 0, 0, 0, time.UTC)},
+		{"Uebermorgen", time.Date(2026, 7, 3, 0, 0, 0, 0, time.UTC)},
+		{"übermorgen", time.Date(2026, 7, 3, 0, 0, 0, 0, time.UTC)},
+		{"naechste woche", time.Date(2026, 7, 6, 0, 0, 0, 0, time.UTC)},
+		{"nächste woche", time.Date(2026, 7, 6, 0, 0, 0, 0, time.UTC)},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			date, ok := Parse(tt.input, refTime)
+			if !ok {
+				t.Fatalf("expected %q to parse", tt.input)
+			}
+			if !date.Equal(tt.expected) {
+				t.Errorf("expected %v, got %v", tt.expected, date)
+			}
+		})
+	}
+}
+
 func TestParseWeekdayNames(t *testing.T) {
 	tests := []struct {
 		input    string
@@ -94,6 +123,13 @@ func TestParseWeekdayNames(t *testing.T) {
 		{"sunday", time.Date(2026, 7, 5, 0, 0, 0, 0, time.UTC)},     // this Sunday
 		{"Friday", time.Date(2026, 7, 3, 0, 0, 0, 0, time.UTC)},     // case insensitive
 		{"MONDAY", time.Date(2026, 7, 6, 0, 0, 0, 0, time.UTC)},     // case insensitive
+		{"Montag", time.Date(2026, 7, 6, 0, 0, 0, 0, time.UTC)},     // German Monday
+		{"dienstag", time.Date(2026, 7, 7, 0, 0, 0, 0, time.UTC)},   // German Tuesday
+		{"Mittwoch", time.Date(2026, 7, 8, 0, 0, 0, 0, time.UTC)},   // German Wednesday
+		{"donnerstag", time.Date(2026, 7, 2, 0, 0, 0, 0, time.UTC)}, // German Thursday
+		{"Freitag", time.Date(2026, 7, 3, 0, 0, 0, 0, time.UTC)},    // German Friday
+		{"samstag", time.Date(2026, 7, 4, 0, 0, 0, 0, time.UTC)},    // German Saturday
+		{"Sonntag", time.Date(2026, 7, 5, 0, 0, 0, 0, time.UTC)},    // German Sunday
 	}
 
 	for _, tt := range tests {

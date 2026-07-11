@@ -5,28 +5,36 @@ import (
 	"time"
 )
 
-// weekdays maps lowercase weekday names to time.Weekday values.
+// weekdays maps lowercase weekday names (English and German) to time.Weekday values.
 var weekdays = map[string]time.Weekday{
-	"monday":    time.Monday,
-	"tuesday":   time.Tuesday,
-	"wednesday": time.Wednesday,
-	"thursday":  time.Thursday,
-	"friday":    time.Friday,
-	"saturday":  time.Saturday,
-	"sunday":    time.Sunday,
+	"monday":     time.Monday,
+	"tuesday":    time.Tuesday,
+	"wednesday":  time.Wednesday,
+	"thursday":   time.Thursday,
+	"friday":     time.Friday,
+	"saturday":   time.Saturday,
+	"sunday":     time.Sunday,
+	"montag":     time.Monday,
+	"dienstag":   time.Tuesday,
+	"mittwoch":   time.Wednesday,
+	"donnerstag": time.Thursday,
+	"freitag":    time.Friday,
+	"samstag":    time.Saturday,
+	"sonntag":    time.Sunday,
 }
 
 // Parse attempts to parse a date string relative to the given reference time.
 // It returns the parsed date and true if successful, or zero time and false if
 // the input is not a recognized date pattern.
 //
-// Supported patterns:
-//   - "today"              -> reference date
-//   - "tomorrow"           -> reference date + 1 day
-//   - "next week"          -> next Monday from reference date
-//   - weekday names        -> next occurrence of that weekday (case-insensitive)
-//   - "YYYY-MM-DD"         -> exact ISO date
-//   - "MM-DD"              -> month-day of current year, or next year if past
+// Supported patterns (English and German):
+//   - "today" / "heute"                        -> reference date
+//   - "tomorrow" / "morgen"                    -> reference date + 1 day
+//   - "uebermorgen" / "übermorgen"             -> reference date + 2 days
+//   - "next week" / "naechste woche"           -> next Monday from reference date
+//   - weekday names (EN: monday.. / DE: montag..) -> next occurrence (case-insensitive)
+//   - "YYYY-MM-DD"                             -> exact ISO date
+//   - "MM-DD"                                  -> month-day of current year, or next year if past
 func Parse(input string, relativeTo time.Time) (time.Time, bool) {
 	normalized := strings.TrimSpace(strings.ToLower(input))
 
@@ -38,14 +46,16 @@ func Parse(input string, relativeTo time.Time) (time.Time, bool) {
 	today := time.Date(relativeTo.Year(), relativeTo.Month(), relativeTo.Day(),
 		0, 0, 0, 0, relativeTo.Location())
 
-	// Check keyword dates
+	// Check keyword dates (English and German)
 	switch normalized {
-	case "today":
+	case "today", "heute":
 		return today, true
-	case "tomorrow":
+	case "tomorrow", "morgen":
 		return today.AddDate(0, 0, 1), true
-	case "next week":
+	case "next week", "naechste woche", "nächste woche":
 		return nextWeekday(today, time.Monday), true
+	case "uebermorgen", "übermorgen":
+		return today.AddDate(0, 0, 2), true
 	}
 
 	// Check weekday names
