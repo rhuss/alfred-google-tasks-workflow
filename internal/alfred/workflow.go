@@ -693,7 +693,6 @@ func (w *Workflow) renderGroupedTasksWithWarnings(grouped tasks.GroupedTasks, wa
 				Arg(item.Task.Title).
 				Var("listID", item.ListID).
 				Var("taskID", item.Task.Id).
-				Largetype(largetypeText(item.Task.Notes)).
 				Icon(icon).
 				Valid(true)
 

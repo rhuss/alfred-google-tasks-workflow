@@ -2,7 +2,6 @@ package alfred
 
 import (
 	"fmt"
-	"strings"
 
 	aw "github.com/deanishe/awgo"
 
@@ -60,7 +59,6 @@ func (w *Workflow) RenderGroupedTasks(grouped tasks.GroupedTasks) {
 				Arg(item.Task.Title).
 				Var("listID", item.ListID).
 				Var("taskID", item.Task.Id).
-				Largetype(largetypeText(item.Task.Notes)).
 				Icon(icon).
 				Valid(true)
 
@@ -73,13 +71,6 @@ func (w *Workflow) RenderGroupedTasks(grouped tasks.GroupedTasks) {
 	}
 
 	w.WF.SendFeedback()
-}
-
-func largetypeText(notes string) string {
-	if strings.TrimSpace(notes) == "" {
-		return "(no details)"
-	}
-	return notes
 }
 
 func buildSubtitle(groupLabel string, item tasks.TaskItem) string {
