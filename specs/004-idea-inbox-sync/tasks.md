@@ -112,7 +112,7 @@ func SyncIdeas(client *tasks.Client, accountName string, listName string, inboxP
 
 **Purpose**: Documentation and final validation
 
-- [ ] T012 Update README.md with Idea Inbox Sync configuration section (IDEA_INBOX_PATH and IDEA_LIST_NAME variables, example setup, Gemini voice command tip for Android)
+- [X] T012 Update README.md with Idea Inbox Sync configuration section (IDEA_INBOX_PATH and IDEA_LIST_NAME variables, example setup, Gemini voice command tip for Android)
 
 ---
 
