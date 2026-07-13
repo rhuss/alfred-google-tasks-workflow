@@ -235,6 +235,55 @@ All settings are accessible via the `[x]` button in Alfred's workflow editor.
 | Quick Add 2 Keyword | Alfred keyword for quick-add slot 2 (default: `gtp`) |
 | Quick Add 2 Account | Account name for quick-add slot 2 |
 
+## Idea Inbox Sync (Obsidian)
+
+Automatically sync tasks from a designated Google Tasks list to an Obsidian markdown file. Useful for capturing ideas via voice (e.g., Google Gemini on Android) and routing them into your Obsidian inbox for later processing.
+
+The sync runs silently during every `gt list` operation. New ideas are appended to the inbox file and deleted from Google Tasks. Already-synced ideas are skipped (deduplicated by TaskID). The feature scans all authenticated accounts, regardless of which account is targeted.
+
+### Setup
+
+Set two environment variables in Alfred's workflow configuration (`[x]` button):
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `IDEA_INBOX_PATH` | Absolute path to the Obsidian inbox markdown file | `~/Obsidian/Vault/00-Inbox/ideas.md` |
+| `IDEA_LIST_NAME` | Name of the Google Tasks list to sync from | `Ideas` |
+
+Both variables must be set for the feature to activate. If either is missing, the workflow behaves normally with zero overhead.
+
+The inbox file and any parent directories are created automatically on first sync.
+
+### Inbox File Format
+
+Each synced idea is appended as an H3 entry with metadata:
+
+```markdown
+# Idea Inbox
+
+### Buy noise-cancelling headphones
+- Date: 2026-07-13
+- Account: personal
+- TaskID: dHJhbnNpdC0xMjM
+
+Check reviews on Wirecutter first. Budget around 300 EUR.
+
+### Learn origami
+- Date: 2026-07-12
+- Account: work
+- TaskID: dHJhbnNpdC00NTY
+```
+
+The `Account` field is omitted in single-account mode.
+
+### Voice Capture with Gemini (Android)
+
+On Android, you can use Google Gemini to quickly capture ideas by voice:
+
+> "Add a task *Build a standing desk* to my Ideas list"
+
+The task lands in your Google Tasks "Ideas" list instantly. Next time you run `gt list` on your Mac, the idea is synced to your Obsidian inbox and removed from Google Tasks.
+
 ## Troubleshooting
 
 **"Setup Required" when running gt login**
