@@ -102,7 +102,7 @@ func SyncIdeas(client *tasks.Client, accountName string, listName string, inboxP
 
 ### Implementation for User Story 4
 
-- [ ] T011 [US4] Add auto-creation edge case tests in internal/ideas/inbox_test.go (test file creation when parent directory is deeply nested, test that header is `# Idea Inbox\n\n`, test that subsequent appends preserve the header)
+- [X] T011 [US4] Add auto-creation edge case tests in internal/ideas/inbox_test.go (test file creation when parent directory is deeply nested, test that header is `# Idea Inbox\n\n`, test that subsequent appends preserve the header)
 
 **Checkpoint**: Auto-creation is implemented in T001; this phase adds edge case test coverage
 
