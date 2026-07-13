@@ -295,6 +295,48 @@ func TestSyncIdeas_SkipsEmptyTitles(t *testing.T) {
 	}
 }
 
+func TestSyncIdeas_EmptyInboxPath(t *testing.T) {
+	client := &mockTasksClient{
+		findErr: fmt.Errorf("should not be called"),
+	}
+
+	count, err := SyncIdeas(client, "", "Ideas", "")
+	if err != nil {
+		t.Fatalf("SyncIdeas() error = %v", err)
+	}
+	if count != 0 {
+		t.Errorf("SyncIdeas() count = %d, want 0", count)
+	}
+}
+
+func TestSyncIdeas_EmptyListName(t *testing.T) {
+	client := &mockTasksClient{
+		findErr: fmt.Errorf("should not be called"),
+	}
+
+	count, err := SyncIdeas(client, "", "", "/some/path.md")
+	if err != nil {
+		t.Fatalf("SyncIdeas() error = %v", err)
+	}
+	if count != 0 {
+		t.Errorf("SyncIdeas() count = %d, want 0", count)
+	}
+}
+
+func TestSyncIdeas_BothEmpty(t *testing.T) {
+	client := &mockTasksClient{
+		findErr: fmt.Errorf("should not be called"),
+	}
+
+	count, err := SyncIdeas(client, "", "", "")
+	if err != nil {
+		t.Fatalf("SyncIdeas() error = %v", err)
+	}
+	if count != 0 {
+		t.Errorf("SyncIdeas() count = %d, want 0", count)
+	}
+}
+
 func TestSyncIdeas_EmptyTaskList(t *testing.T) {
 	dir := t.TempDir()
 	inboxPath := filepath.Join(dir, "inbox.md")
