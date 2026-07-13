@@ -10,6 +10,7 @@ import (
 	aw "github.com/deanishe/awgo"
 
 	"github.com/rhuss/alfred-google-tasks-workflow/internal/auth"
+	"github.com/rhuss/alfred-google-tasks-workflow/internal/ideas"
 	"github.com/rhuss/alfred-google-tasks-workflow/internal/input"
 	"github.com/rhuss/alfred-google-tasks-workflow/internal/tasks"
 )
@@ -733,6 +734,48 @@ func (w *Workflow) fetchTasksForCurrentAccount(listFilter string) ([]tasks.TaskI
 		return client.FetchTasksFromList(listFilter)
 	}
 	return client.FetchAllTasks()
+}
+
+// syncIdeasToInbox syncs ideas from the current account's Ideas list to the
+// Obsidian inbox file. Silently returns on any error (FR-009).
+func (w *Workflow) syncIdeasToInbox() {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Fprintf(os.Stderr, "idea sync panic: %v\n", r)
+		}
+	}()
+
+	inboxPath := os.Getenv("IDEA_INBOX_PATH")
+	listName := os.Getenv("IDEA_LIST_NAME")
+	if inboxPath == "" || listName == "" {
+		return
+	}
+
+	authConfig, err := w.getAuthenticatedClient()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "idea sync auth: %v\n", err)
+		return
+	}
+
+	client, err := tasks.NewClient(authConfig.Token, authConfig.Config)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "idea sync client: %v\n", err)
+		return
+	}
+
+	accountName := ""
+	if w.AccountConfig != nil && w.AccountCtx.Name != "" {
+		accountName = w.AccountCtx.Name
+	}
+
+	count, err := ideas.SyncIdeas(client, accountName, listName, inboxPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "idea sync: %v\n", err)
+		return
+	}
+	if count > 0 {
+		fmt.Fprintf(os.Stderr, "idea sync: synced %d ideas from %s\n", count, listName)
+	}
 }
 
 // handleOpen opens Google Tasks in the browser.
