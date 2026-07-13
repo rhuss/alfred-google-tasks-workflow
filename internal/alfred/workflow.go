@@ -583,6 +583,8 @@ func (w *Workflow) handleList(args []string) {
 		return
 	}
 
+	w.syncIdeasToInbox()
+
 	items, err := w.fetchTasksForCurrentAccount(listFilter)
 	if err != nil {
 		w.WF.NewItem("Failed to fetch tasks").
