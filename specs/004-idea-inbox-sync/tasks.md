@@ -88,7 +88,7 @@ func SyncIdeas(client *tasks.Client, accountName string, listName string, inboxP
 ### Implementation for User Story 3
 
 - [X] T009 [US3] Add guard clause tests in internal/ideas/sync_test.go (verify SyncIdeas returns 0 immediately when inboxPath is empty; verify no API calls or file I/O occur when called with empty path)
-- [ ] T010 [US3] Add workflow-level guard tests in internal/alfred/workflow_test.go (verify syncIdeasToInbox is a no-op when IDEA_INBOX_PATH env var is unset; verify syncIdeasAllAccounts is a no-op when env vars are unset)
+- [X] T010 [US3] Add workflow-level guard tests in internal/alfred/workflow_test.go (verify syncIdeasToInbox is a no-op when IDEA_INBOX_PATH env var is unset; verify syncIdeasAllAccounts is a no-op when env vars are unset)
 
 **Checkpoint**: Feature is fully opt-in with zero impact when disabled
 
