@@ -96,7 +96,7 @@ A user configures IDEA_INBOX_PATH but the target file does not exist yet. The wo
 - **FR-009**: System MUST NOT block, delay, or interfere with the task listing display if any part of the idea sync fails.
 - **FR-010**: System MUST silently skip accounts where the Ideas list does not exist.
 - **FR-011**: System MUST silently skip accounts that are not authenticated.
-- **FR-012**: System MUST use the task's creation date (from the Google Tasks API `updated` or creation timestamp) for the Date metadata field.
+- **FR-012**: System MUST use the task's `updated` timestamp from the Google Tasks API for the Date metadata field, formatted as YYYY-MM-DD.
 
 ### Key Entities
 
@@ -113,6 +113,12 @@ A user configures IDEA_INBOX_PATH but the target file does not exist yet. The wo
 - **SC-003**: Task listing performance is not noticeably degraded when the Ideas list is empty or does not exist (the common case).
 - **SC-004**: Zero data loss: every idea written to Google Tasks eventually appears in the Obsidian inbox, even if sync fails partway through (dedup ensures retry on next listing).
 - **SC-005**: Existing users who do not configure the feature experience no behavioral changes.
+
+## Clarifications
+
+### Session 2026-07-13
+
+- Q: Which Google Tasks API field to use for the Date metadata? → A: Use the `updated` timestamp (for newly created tasks this equals creation time; the API does not expose a separate `created` field). Format as YYYY-MM-DD.
 
 ## Assumptions
 
