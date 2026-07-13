@@ -109,6 +109,10 @@ func buildSubtitle(groupLabel string, item tasks.TaskItem) string {
 		subtitle += fmt.Sprintf(" - due %s", item.Task.Due[:10])
 	}
 
+	if strings.TrimSpace(item.Task.Notes) != "" {
+		subtitle += " *"
+	}
+
 	return subtitle
 }
 
