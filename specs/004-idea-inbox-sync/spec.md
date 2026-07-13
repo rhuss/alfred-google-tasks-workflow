@@ -89,7 +89,7 @@ A user configures IDEA_INBOX_PATH but the target file does not exist yet. The wo
 - **FR-002**: System MUST skip idea sync entirely if either `IDEA_INBOX_PATH` or `IDEA_LIST_NAME` is not set, with zero performance impact on the listing.
 - **FR-003**: System MUST scan the configured Ideas list on ALL authenticated accounts during every `gt list` operation, regardless of account targeting.
 - **FR-004**: System MUST deduplicate ideas by matching TaskID values against `- TaskID:` lines in the existing inbox file.
-- **FR-005**: System MUST append new ideas to the inbox file using H3 headings with Date, Account, and TaskID metadata fields.
+- **FR-005**: System MUST append new ideas to the inbox file using H3 headings with Date, Account, and TaskID metadata as bullet-list fields (see Inbox Entry Format). In single-account mode (no accounts.json), the Account field MUST be omitted.
 - **FR-006**: System MUST include the task notes as description text below the metadata when notes are present, and omit the description section when notes are empty.
 - **FR-007**: System MUST delete each task from Google Tasks only after it has been successfully written to the inbox file.
 - **FR-008**: System MUST create the inbox file with a `# Idea Inbox` header if it does not exist, including creating parent directories as needed.
@@ -104,15 +104,54 @@ A user configures IDEA_INBOX_PATH but the target file does not exist yet. The wo
 - **Ideas List**: A Google Tasks list whose name matches the configured `IDEA_LIST_NAME` variable. May or may not exist on each account.
 - **Inbox File**: A markdown file at the path specified by `IDEA_INBOX_PATH` that accumulates all synced ideas.
 
+### Inbox Entry Format
+
+Each idea is appended as a markdown block with the following structure:
+
+**Entry with notes:**
+```markdown
+### Buy noise-cancelling headphones
+- Date: 2026-07-13
+- Account: personal
+- TaskID: dHJhbnNpdC0xMjM
+
+Check reviews on Wirecutter first. Budget around 300 EUR.
+```
+
+**Entry without notes:**
+```markdown
+### Research vacation destinations
+- Date: 2026-07-12
+- Account: work
+- TaskID: dHJhbnNpdC00NTY
+```
+
+In single-account mode (no accounts.json), the Account field is omitted:
+```markdown
+### Call dentist
+- Date: 2026-07-13
+- TaskID: dHJhbnNpdC03ODk
+```
+
+Entries are separated by a blank line. The description (from task notes) appears as plain text below the metadata, separated by a blank line from the metadata block.
+
 ## Success Criteria *(mandatory)*
 
 ### Measurable Outcomes
 
 - **SC-001**: Ideas captured via voice on Android appear in the Obsidian inbox file within one `gt list` invocation, with no manual steps required.
 - **SC-002**: The Ideas list on Google Tasks is empty after a successful sync, keeping the capture surface clean for new ideas.
-- **SC-003**: Task listing performance is not noticeably degraded when the Ideas list is empty or does not exist (the common case).
+- **SC-003**: Task listing adds less than 500ms of latency when the Ideas list is empty or does not exist (the common case), as measured by the total `gt list` response time.
 - **SC-004**: Zero data loss: every idea written to Google Tasks eventually appears in the Obsidian inbox, even if sync fails partway through (dedup ensures retry on next listing).
 - **SC-005**: Existing users who do not configure the feature experience no behavioral changes.
+
+## Out of Scope
+
+- Bidirectional sync (writing ideas back from Obsidian to Google Tasks)
+- Manual/on-demand sync trigger (sync only runs as a side effect of `gt list`)
+- Editing or transforming idea content during sync (ideas are copied verbatim)
+- Syncing completed or hidden tasks from the Ideas list
+- Configuring different inbox files per account
 
 ## Clarifications
 
