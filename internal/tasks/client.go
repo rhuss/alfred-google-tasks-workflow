@@ -168,6 +168,24 @@ func (c *Client) ResolveTaskList(name string) (*tasks.TaskList, error) {
 	return c.CreateTaskList(name)
 }
 
+// GetTask fetches a single task's full details from a task list.
+func (c *Client) GetTask(listID, taskID string) (*tasks.Task, error) {
+	task, err := c.service.Tasks.Get(listID, taskID).Do()
+	if err != nil {
+		return nil, wrapAPIError(err)
+	}
+	return task, nil
+}
+
+// GetTaskList fetches a task list's metadata by its ID.
+func (c *Client) GetTaskList(listID string) (*tasks.TaskList, error) {
+	taskList, err := c.service.Tasklists.Get(listID).Do()
+	if err != nil {
+		return nil, wrapAPIError(err)
+	}
+	return taskList, nil
+}
+
 // GetDefaultTaskList returns the user's first (default) task list.
 func (c *Client) GetDefaultTaskList() (*tasks.TaskList, error) {
 	lists, err := c.ListTaskLists()

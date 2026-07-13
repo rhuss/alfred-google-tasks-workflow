@@ -5,6 +5,7 @@ import (
 
 	aw "github.com/deanishe/awgo"
 
+	"github.com/rhuss/alfred-google-tasks-workflow/internal/auth"
 	"github.com/rhuss/alfred-google-tasks-workflow/internal/tasks"
 )
 
@@ -17,6 +18,7 @@ var (
 	iconComplete = &aw.Icon{Value: "icons/complete.png"}
 	iconDelete   = &aw.Icon{Value: "icons/delete.png"}
 	iconOpen     = &aw.Icon{Value: "icons/open.png"}
+	iconMove     = &aw.Icon{Value: "icons/move.png"}
 )
 
 func iconForTimeframe(tf tasks.Timeframe) *aw.Icon {
@@ -86,7 +88,7 @@ func buildSubtitle(groupLabel string, item tasks.TaskItem) string {
 	return subtitle
 }
 
-func (w *Workflow) RenderActionMenu(listID, taskID, accountName string) {
+func (w *Workflow) RenderActionMenu(listID, taskID, accountName string, accountConfig *auth.AccountConfig) {
 	actionRef := listID + ":" + taskID
 
 	completeItem := w.WF.NewItem("Complete Task").
@@ -111,6 +113,37 @@ func (w *Workflow) RenderActionMenu(listID, taskID, accountName string) {
 		completeItem.Var("accountName", accountName)
 		deleteItem.Var("accountName", accountName)
 		openItem.Var("accountName", accountName)
+	}
+
+	// Add "Move to {target}" entries when multi-account mode is active
+	if accountConfig != nil && len(accountConfig.Accounts) >= 2 {
+		// When accountName is empty (single-account listing in multi-account mode),
+		// fall back to the default account name for the self-exclusion check.
+		effectiveAccount := accountName
+		if effectiveAccount == "" {
+			effectiveAccount = accountConfig.Default
+			if effectiveAccount == "" {
+				effectiveAccount = accountConfig.AccountNames()[0]
+			}
+		}
+		for _, targetName := range accountConfig.AccountNames() {
+			if targetName == effectiveAccount {
+				continue
+			}
+			targetCtx, err := auth.ResolveAccount(accountConfig, targetName)
+			if err != nil {
+				continue
+			}
+			if !auth.TokenExists(targetCtx.DataDir) {
+				continue
+			}
+			moveItem := w.WF.NewItem(fmt.Sprintf("Move to %s", targetName)).
+				Subtitle(fmt.Sprintf("Move this task to %s account", targetName)).
+				Arg(fmt.Sprintf("move:%s|%s", targetName, actionRef)).
+				Icon(iconMove).
+				Valid(true)
+			moveItem.Var("accountName", effectiveAccount)
+		}
 	}
 
 	w.WF.SendFeedback()

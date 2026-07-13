@@ -1,6 +1,7 @@
 package alfred
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -785,7 +786,7 @@ func (w *Workflow) handleAction(args []string) {
 		NotifyError("Google Tasks", "Could not identify task")
 		return
 	}
-	w.RenderActionMenu(listID, taskID, os.Getenv("accountName"))
+	w.RenderActionMenu(listID, taskID, os.Getenv("accountName"), w.AccountConfig)
 }
 
 // resolveAccountFromEnv checks for an accountName environment variable
@@ -815,6 +816,12 @@ func (w *Workflow) executeAction(action, listID, taskID string) {
 		if err := tasks.OpenGoogleTasks(w.AccountCtx.ProfileIndex); err != nil {
 			NotifyError("Google Tasks", fmt.Sprintf("Failed to open browser: %v", err))
 		}
+		return
+	}
+
+	// Handle move:{targetAccount} action
+	if strings.HasPrefix(action, "move:") {
+		w.executeMoveAction(action, listID, taskID)
 		return
 	}
 
@@ -856,4 +863,87 @@ func (w *Workflow) executeAction(action, listID, taskID string) {
 	default:
 		NotifyError("Google Tasks", fmt.Sprintf("Unknown action: %s", action))
 	}
+}
+
+// executeMoveAction handles the "move:{targetAccount}" action by creating the
+// task on the target account and deleting it from the source.
+func (w *Workflow) executeMoveAction(action, listID, taskID string) {
+	targetAccount := strings.TrimPrefix(action, "move:")
+
+	if w.AccountConfig == nil {
+		NotifyError("Google Tasks", "Move requires multi-account mode")
+		return
+	}
+
+	if !w.requireAuth() {
+		return
+	}
+
+	// Create source client
+	sourceAuth, err := w.getAuthenticatedClient()
+	if err != nil {
+		NotifyError("Google Tasks", fmt.Sprintf("Source auth error: %v", err))
+		fmt.Fprintf(os.Stderr, "move source auth error: %v\n", err)
+		return
+	}
+
+	sourceClient, err := tasks.NewClient(sourceAuth.Token, sourceAuth.Config)
+	if err != nil {
+		NotifyError("Google Tasks", fmt.Sprintf("Source client error: %v", err))
+		fmt.Fprintf(os.Stderr, "move source client error: %v\n", err)
+		return
+	}
+
+	// Resolve target account
+	targetCtx, err := auth.ResolveAccount(w.AccountConfig, targetAccount)
+	if err != nil {
+		NotifyError("Google Tasks", fmt.Sprintf("Unknown target account: %s", targetAccount))
+		fmt.Fprintf(os.Stderr, "move resolve target error: %v\n", err)
+		return
+	}
+
+	// Create target client
+	targetConfig, err := auth.LoadClientCredentialsFrom(targetCtx.CredentialsPath)
+	if err != nil {
+		NotifyError("Google Tasks", fmt.Sprintf("Target credentials error: %v", err))
+		fmt.Fprintf(os.Stderr, "move target credentials error: %v\n", err)
+		return
+	}
+
+	targetToken, err := auth.EnsureValidToken(targetCtx.DataDir, targetConfig)
+	if err != nil {
+		NotifyError("Google Tasks", fmt.Sprintf("Target auth error: %v", err))
+		fmt.Fprintf(os.Stderr, "move target token error: %v\n", err)
+		return
+	}
+
+	targetClient, err := tasks.NewClient(targetToken, targetConfig)
+	if err != nil {
+		NotifyError("Google Tasks", fmt.Sprintf("Target client error: %v", err))
+		fmt.Fprintf(os.Stderr, "move target client error: %v\n", err)
+		return
+	}
+
+	// Fetch the source list name so the target list can be matched by name
+	sourceList, err := sourceClient.GetTaskList(listID)
+	if err != nil {
+		NotifyError("Google Tasks", fmt.Sprintf("Failed to get source list: %v", err))
+		fmt.Fprintf(os.Stderr, "move get source list error: %v\n", err)
+		return
+	}
+
+	// Execute the move
+	_, err = sourceClient.MoveTask(listID, taskID, targetClient, sourceList.Title)
+	if err != nil {
+		if _, ok := errors.AsType[*tasks.PartialMoveError](err); ok {
+			NotifyError("Google Tasks", "Task moved but could not delete original. You may have a duplicate.")
+			fmt.Fprintf(os.Stderr, "move partial error: %v\n", err)
+			return
+		}
+		NotifyError("Google Tasks", fmt.Sprintf("Failed to move task: %v", err))
+		fmt.Fprintf(os.Stderr, "move error: %v\n", err)
+		return
+	}
+
+	NotifySuccess("Google Tasks", fmt.Sprintf("Task moved to %s", targetAccount))
 }
