@@ -1,0 +1,660 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>bundleid</key>
+	<string>com.rhuss.gtasks</string>
+	<key>category</key>
+	<string>Productivity</string>
+	<key>connections</key>
+	<dict>
+		<key>script-filter-main</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>conditional-route</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitocentre</key>
+				<false/>
+			</dict>
+		</array>
+		<key>conditional-route</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>run-create</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>sourceoutputuid</key>
+				<string>E8A1B2C3-D4E5-4F60-A7B8-C9D0E1F2A3B4</string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+			<dict>
+				<key>destinationuid</key>
+				<string>script-filter-actions</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+		</array>
+		<key>script-filter-actions</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>run-action</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitocentre</key>
+				<false/>
+			</dict>
+		</array>
+		<key>quick-add-1</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>run-create</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+		</array>
+		<key>quick-add-2</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>run-create</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+		</array>
+		<key>hotkey-quickadd</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>quick-add-1</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+		</array>
+	</dict>
+	<key>connectedoutputs</key>
+	<dict/>
+	<key>createdby</key>
+	<string>Roland Huss</string>
+	<key>description</key>
+	<string>Manage Google Tasks from Alfred</string>
+	<key>disabled</key>
+	<false/>
+	<key>name</key>
+	<string>Google Tasks</string>
+	<key>objects</key>
+	<array>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>alfredfiltersresults</key>
+				<false/>
+				<key>alfredfiltersresultsmatchmode</key>
+				<integer>0</integer>
+				<key>argumenttrimmode</key>
+				<integer>0</integer>
+				<key>argumenttype</key>
+				<integer>1</integer>
+				<key>escaping</key>
+				<integer>102</integer>
+				<key>keyword</key>
+				<string>gt</string>
+				<key>queuedelaycustom</key>
+				<integer>3</integer>
+				<key>queuedelayimmediatelyalinitially</key>
+				<true/>
+				<key>queuedelaymode</key>
+				<integer>0</integer>
+				<key>queuemode</key>
+				<integer>1</integer>
+				<key>runningsubtext</key>
+				<string>Loading...</string>
+				<key>script</key>
+				<string>./gtasks "${1}"</string>
+				<key>scriptargtype</key>
+				<integer>1</integer>
+				<key>scriptfile</key>
+				<string></string>
+				<key>subtext</key>
+				<string>Manage Google Tasks</string>
+				<key>title</key>
+				<string>Google Tasks</string>
+				<key>type</key>
+				<integer>0</integer>
+				<key>withspace</key>
+				<true/>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.input.scriptfilter</string>
+			<key>uid</key>
+			<string>script-filter-main</string>
+			<key>version</key>
+			<integer>3</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>alfredfiltersresults</key>
+				<false/>
+				<key>alfredfiltersresultsmatchmode</key>
+				<integer>0</integer>
+				<key>argumenttrimmode</key>
+				<integer>0</integer>
+				<key>argumenttype</key>
+				<integer>2</integer>
+				<key>escaping</key>
+				<integer>102</integer>
+				<key>keyword</key>
+				<string></string>
+				<key>queuedelaycustom</key>
+				<integer>3</integer>
+				<key>queuedelayimmediatelyalinitially</key>
+				<true/>
+				<key>queuedelaymode</key>
+				<integer>0</integer>
+				<key>queuemode</key>
+				<integer>1</integer>
+				<key>runningsubtext</key>
+				<string>Loading actions...</string>
+				<key>script</key>
+				<string>./gtasks action "${1}"</string>
+				<key>scriptargtype</key>
+				<integer>1</integer>
+				<key>scriptfile</key>
+				<string></string>
+				<key>subtext</key>
+				<string></string>
+				<key>title</key>
+				<string>Task Actions</string>
+				<key>type</key>
+				<integer>0</integer>
+				<key>withspace</key>
+				<false/>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.input.scriptfilter</string>
+			<key>uid</key>
+			<string>script-filter-actions</string>
+			<key>version</key>
+			<integer>3</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>concurrently</key>
+				<false/>
+				<key>escaping</key>
+				<integer>102</integer>
+				<key>script</key>
+				<string>./gtasks action "${1}"</string>
+				<key>scriptargtype</key>
+				<integer>1</integer>
+				<key>scriptfile</key>
+				<string></string>
+				<key>type</key>
+				<integer>0</integer>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.action.script</string>
+			<key>uid</key>
+			<string>run-action</string>
+			<key>version</key>
+			<integer>2</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>conditions</key>
+				<array>
+					<dict>
+						<key>inputstring</key>
+						<string></string>
+						<key>matchcasesensitive</key>
+						<true/>
+						<key>matchmode</key>
+						<integer>4</integer>
+						<key>matchstring</key>
+						<string>^(create:|cmd:)</string>
+						<key>outputlabel</key>
+						<string>Direct Action</string>
+						<key>uid</key>
+						<string>E8A1B2C3-D4E5-4F60-A7B8-C9D0E1F2A3B4</string>
+					</dict>
+				</array>
+				<key>elselabel</key>
+				<string>Task Actions</string>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.utility.conditional</string>
+			<key>uid</key>
+			<string>conditional-route</string>
+			<key>version</key>
+			<integer>1</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>concurrently</key>
+				<false/>
+				<key>escaping</key>
+				<integer>102</integer>
+				<key>script</key>
+				<string>input="${1}"; case "$input" in create:*) ./gtasks create "${input#create:}" ;; cmd:*) ./gtasks "${input#cmd:}" ;; esac</string>
+				<key>scriptargtype</key>
+				<integer>1</integer>
+				<key>scriptfile</key>
+				<string></string>
+				<key>type</key>
+				<integer>0</integer>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.action.script</string>
+			<key>uid</key>
+			<string>run-create</string>
+			<key>version</key>
+			<integer>2</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>alfredfiltersresults</key>
+				<false/>
+				<key>alfredfiltersresultsmatchmode</key>
+				<integer>0</integer>
+				<key>argumenttrimmode</key>
+				<integer>0</integer>
+				<key>argumenttype</key>
+				<integer>1</integer>
+				<key>escaping</key>
+				<integer>102</integer>
+				<key>keyword</key>
+				<string>{var:QUICK_ADD_1_KEYWORD}</string>
+				<key>queuedelaycustom</key>
+				<integer>3</integer>
+				<key>queuedelayimmediatelyalinitially</key>
+				<true/>
+				<key>queuedelaymode</key>
+				<integer>0</integer>
+				<key>queuemode</key>
+				<integer>1</integer>
+				<key>runningsubtext</key>
+				<string>Loading...</string>
+				<key>script</key>
+				<string>QUICK_ADD_ACCOUNT="$QUICK_ADD_1_ACCOUNT" ./gtasks "add ${1}"</string>
+				<key>scriptargtype</key>
+				<integer>1</integer>
+				<key>scriptfile</key>
+				<string></string>
+				<key>subtext</key>
+				<string>Quick add task ({var:QUICK_ADD_1_ACCOUNT})</string>
+				<key>title</key>
+				<string>Quick Add ({var:QUICK_ADD_1_ACCOUNT})</string>
+				<key>type</key>
+				<integer>0</integer>
+				<key>withspace</key>
+				<true/>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.input.scriptfilter</string>
+			<key>uid</key>
+			<string>quick-add-1</string>
+			<key>version</key>
+			<integer>3</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>alfredfiltersresults</key>
+				<false/>
+				<key>alfredfiltersresultsmatchmode</key>
+				<integer>0</integer>
+				<key>argumenttrimmode</key>
+				<integer>0</integer>
+				<key>argumenttype</key>
+				<integer>1</integer>
+				<key>escaping</key>
+				<integer>102</integer>
+				<key>keyword</key>
+				<string>{var:QUICK_ADD_2_KEYWORD}</string>
+				<key>queuedelaycustom</key>
+				<integer>3</integer>
+				<key>queuedelayimmediatelyalinitially</key>
+				<true/>
+				<key>queuedelaymode</key>
+				<integer>0</integer>
+				<key>queuemode</key>
+				<integer>1</integer>
+				<key>runningsubtext</key>
+				<string>Loading...</string>
+				<key>script</key>
+				<string>QUICK_ADD_ACCOUNT="$QUICK_ADD_2_ACCOUNT" ./gtasks "add ${1}"</string>
+				<key>scriptargtype</key>
+				<integer>1</integer>
+				<key>scriptfile</key>
+				<string></string>
+				<key>subtext</key>
+				<string>Quick add task ({var:QUICK_ADD_2_ACCOUNT})</string>
+				<key>title</key>
+				<string>Quick Add ({var:QUICK_ADD_2_ACCOUNT})</string>
+				<key>type</key>
+				<integer>0</integer>
+				<key>withspace</key>
+				<true/>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.input.scriptfilter</string>
+			<key>uid</key>
+			<string>quick-add-2</string>
+			<key>version</key>
+			<integer>3</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>action</key>
+				<integer>0</integer>
+				<key>focusedappvariable</key>
+				<false/>
+				<key>focusedappvariablename</key>
+				<string></string>
+				<key>hotkey</key>
+				<integer>0</integer>
+				<key>hotmod</key>
+				<integer>0</integer>
+				<key>hotstring</key>
+				<string></string>
+				<key>leftcursor</key>
+				<false/>
+				<key>modsmode</key>
+				<integer>0</integer>
+				<key>relatedAppsMode</key>
+				<integer>0</integer>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.trigger.hotkey</string>
+			<key>uid</key>
+			<string>hotkey-quickadd</string>
+			<key>version</key>
+			<integer>2</integer>
+		</dict>
+	</array>
+	<key>readme</key>
+	<string>Manage Google Tasks without leaving Alfred.
+
+## Setup
+
+1. Create a Google Cloud project and enable the **Tasks API**
+2. Create a **Desktop** OAuth client and download `client_secret.json`
+3. Run in Terminal:
+`mkdir -p ~/Library/Application\ Support/Alfred/Workflow\ Data/com.rhuss.gtasks/`
+`cp client_secret.json ~/Library/Application\ Support/Alfred/Workflow\ Data/com.rhuss.gtasks/`
+4. Type `gt login` in Alfred to authenticate
+
+Full instructions: [README](https://github.com/rhuss/alfred-google-tasks-workflow)
+
+## Commands
+
+- `gt login` — Authenticate with Google
+- `gt add Buy groceries, tomorrow` — Create task with due date
+- `gt add Call dentist, friday #Work` — Create task in specific list
+- `gt list` — Show tasks grouped by timeframe
+- `gt list #Work` — Filter by list
+- `gt open` — Open Google Tasks in browser
+- `gt logout` — Disconnect account
+
+## Dates
+
+Supported: **today**, **tomorrow**, **monday**–**sunday**, **next week**, **2026-07-15**, **07-15**
+
+German: **heute**, **morgen**, **uebermorgen**, **montag**–**sonntag**, **naechste woche**
+
+## Lists
+
+Add `#ListName` at the end to target a list. Lists are auto-created if new. Hyphens and underscores become spaces: `#My-List` = "My List".</string>
+	<key>uidata</key>
+	<dict>
+		<key>script-filter-main</key>
+		<dict>
+			<key>xpos</key>
+			<real>150</real>
+			<key>ypos</key>
+			<real>250</real>
+		</dict>
+		<key>conditional-route</key>
+		<dict>
+			<key>xpos</key>
+			<real>400</real>
+			<key>ypos</key>
+			<real>250</real>
+		</dict>
+		<key>run-create</key>
+		<dict>
+			<key>xpos</key>
+			<real>650</real>
+			<key>ypos</key>
+			<real>120</real>
+		</dict>
+		<key>script-filter-actions</key>
+		<dict>
+			<key>xpos</key>
+			<real>650</real>
+			<key>ypos</key>
+			<real>370</real>
+		</dict>
+		<key>run-action</key>
+		<dict>
+			<key>xpos</key>
+			<real>900</real>
+			<key>ypos</key>
+			<real>370</real>
+		</dict>
+		<key>quick-add-1</key>
+		<dict>
+			<key>xpos</key>
+			<real>150</real>
+			<key>ypos</key>
+			<real>500</real>
+		</dict>
+		<key>quick-add-2</key>
+		<dict>
+			<key>xpos</key>
+			<real>150</real>
+			<key>ypos</key>
+			<real>620</real>
+		</dict>
+		<key>hotkey-quickadd</key>
+		<dict>
+			<key>xpos</key>
+			<real>30</real>
+			<key>ypos</key>
+			<real>500</real>
+		</dict>
+	</dict>
+	<key>userconfigurationconfig</key>
+	<array>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>default</key>
+				<string></string>
+				<key>placeholder</key>
+				<string>~/path/to/credentials</string>
+				<key>required</key>
+				<false/>
+				<key>trim</key>
+				<true/>
+			</dict>
+			<key>description</key>
+			<string>Directory containing accounts.json and client_secret.json. For multi-account setup, see README.md. Default: ~/Library/Application Support/Alfred/Workflow Data/com.rhuss.gtasks/</string>
+			<key>label</key>
+			<string>Credentials Directory</string>
+			<key>type</key>
+			<string>textfield</string>
+			<key>variable</key>
+			<string>CREDENTIALS_DIR</string>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>default</key>
+				<string></string>
+				<key>placeholder</key>
+				<string>e.g. personal</string>
+				<key>required</key>
+				<false/>
+				<key>trim</key>
+				<true/>
+			</dict>
+			<key>description</key>
+			<string>Default account name for commands without @account prefix. Must match an account name in accounts.json. Leave empty to use the first account or the value from accounts.json.</string>
+			<key>label</key>
+			<string>Default Account</string>
+			<key>type</key>
+			<string>textfield</string>
+			<key>variable</key>
+			<string>DEFAULT_ACCOUNT</string>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>default</key>
+				<string></string>
+				<key>pairs</key>
+				<array>
+					<array>
+						<string>Default account only</string>
+						<string>default</string>
+					</array>
+					<array>
+						<string>All accounts (merged)</string>
+						<string>all</string>
+					</array>
+				</array>
+			</dict>
+			<key>description</key>
+			<string>What to show when listing tasks without an @account prefix. "Default account only" shows tasks from the default account. "All accounts" merges tasks from all authenticated accounts.</string>
+			<key>label</key>
+			<string>Task Listing Mode</string>
+			<key>type</key>
+			<string>popupbutton</string>
+			<key>variable</key>
+			<string>LIST_DEFAULT</string>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>default</key>
+				<string>gta</string>
+				<key>placeholder</key>
+				<string>e.g. gta</string>
+				<key>required</key>
+				<false/>
+				<key>trim</key>
+				<true/>
+			</dict>
+			<key>description</key>
+			<string>Alfred keyword for quick-adding tasks to account 1. Leave empty to disable.</string>
+			<key>label</key>
+			<string>Quick Add 1 Keyword</string>
+			<key>type</key>
+			<string>textfield</string>
+			<key>variable</key>
+			<string>QUICK_ADD_1_KEYWORD</string>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>default</key>
+				<string></string>
+				<key>placeholder</key>
+				<string>e.g. work</string>
+				<key>required</key>
+				<false/>
+				<key>trim</key>
+				<true/>
+			</dict>
+			<key>description</key>
+			<string>Account name (from accounts.json) to use with the Quick Add 1 keyword. Must match an account name exactly.</string>
+			<key>label</key>
+			<string>Quick Add 1 Account</string>
+			<key>type</key>
+			<string>textfield</string>
+			<key>variable</key>
+			<string>QUICK_ADD_1_ACCOUNT</string>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>default</key>
+				<string>gtp</string>
+				<key>placeholder</key>
+				<string>e.g. gtp</string>
+				<key>required</key>
+				<false/>
+				<key>trim</key>
+				<true/>
+			</dict>
+			<key>description</key>
+			<string>Alfred keyword for quick-adding tasks to account 2. Leave empty to disable.</string>
+			<key>label</key>
+			<string>Quick Add 2 Keyword</string>
+			<key>type</key>
+			<string>textfield</string>
+			<key>variable</key>
+			<string>QUICK_ADD_2_KEYWORD</string>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>default</key>
+				<string></string>
+				<key>placeholder</key>
+				<string>e.g. personal</string>
+				<key>required</key>
+				<false/>
+				<key>trim</key>
+				<true/>
+			</dict>
+			<key>description</key>
+			<string>Account name (from accounts.json) to use with the Quick Add 2 keyword. Must match an account name exactly.</string>
+			<key>label</key>
+			<string>Quick Add 2 Account</string>
+			<key>type</key>
+			<string>textfield</string>
+			<key>variable</key>
+			<string>QUICK_ADD_2_ACCOUNT</string>
+		</dict>
+	</array>
+	<key>version</key>
+	<string>1.5.0</string>
+	<key>webaddress</key>
+	<string>https://github.com/rhuss/alfred-google-tasks-workflow</string>
+</dict>
+</plist>
