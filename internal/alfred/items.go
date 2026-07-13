@@ -1,7 +1,11 @@
 package alfred
 
 import (
+	"crypto/md5"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 
 	aw "github.com/deanishe/awgo"
 
@@ -62,8 +66,10 @@ func (w *Workflow) RenderGroupedTasks(grouped tasks.GroupedTasks) {
 				Icon(icon).
 				Valid(true)
 
-			// Propagate account name so action handlers can re-resolve
-			// the correct account context for merged-list tasks.
+			if qlPath := w.quicklookFile(item.Task.Id, item.Task.Title, item.Task.Notes); qlPath != "" {
+				it.Quicklook(qlPath)
+			}
+
 			if item.AccountName != "" {
 				it.Var("accountName", item.AccountName)
 			}
@@ -71,6 +77,24 @@ func (w *Workflow) RenderGroupedTasks(grouped tasks.GroupedTasks) {
 	}
 
 	w.WF.SendFeedback()
+}
+
+// quicklookFile writes the task notes to a temp file and returns the path.
+// Returns empty string if notes are empty. Files are written to Alfred's
+// cache directory using a hash-based name to avoid conflicts.
+func (w *Workflow) quicklookFile(taskID, title, notes string) string {
+	if strings.TrimSpace(notes) == "" {
+		return ""
+	}
+	cacheDir := w.WF.CacheDir()
+	qlDir := filepath.Join(cacheDir, "quicklook")
+	_ = os.MkdirAll(qlDir, 0o755)
+
+	hash := fmt.Sprintf("%x", md5.Sum([]byte(taskID)))
+	path := filepath.Join(qlDir, hash+".txt")
+	content := title + "\n" + strings.Repeat("=", len(title)) + "\n\n" + notes
+	_ = os.WriteFile(path, []byte(content), 0o644)
+	return path
 }
 
 func buildSubtitle(groupLabel string, item tasks.TaskItem) string {

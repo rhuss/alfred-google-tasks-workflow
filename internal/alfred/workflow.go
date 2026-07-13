@@ -696,8 +696,10 @@ func (w *Workflow) renderGroupedTasksWithWarnings(grouped tasks.GroupedTasks, wa
 				Icon(icon).
 				Valid(true)
 
-			// Propagate account name so action handlers can re-resolve
-			// the correct account context for merged-list tasks.
+			if qlPath := w.quicklookFile(item.Task.Id, item.Task.Title, item.Task.Notes); qlPath != "" {
+				it.Quicklook(qlPath)
+			}
+
 			if item.AccountName != "" {
 				it.Var("accountName", item.AccountName)
 			}
