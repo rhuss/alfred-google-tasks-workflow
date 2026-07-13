@@ -40,8 +40,8 @@ func SyncIdeas(client *tasks.Client, accountName string, listName string, inboxP
 
 **Purpose**: Core inbox file operations that all user stories depend on
 
-- [ ] T001 [P] Implement IdeaEntry struct, ReadSyncedTaskIDs, and AppendIdeaEntry in internal/ideas/inbox.go (ReadSyncedTaskIDs reads file and parses `- TaskID:` lines into a map for dedup; AppendIdeaEntry appends an entry with H3 heading, Date/Account/TaskID metadata as bullet-list fields, optional description from task notes; auto-create file with `# Idea Inbox` header if missing including parent directories; omit Account field when empty; Date is derived from task.Updated parsed as RFC 3339 and formatted as YYYY-MM-DD per FR-012)
-- [ ] T002 [P] Implement unit tests for inbox file operations in internal/ideas/inbox_test.go (test ReadSyncedTaskIDs with existing entries, empty file, and missing file; test AppendIdeaEntry with and without description, with and without Account, auto-create with header, parent directory creation, existing content preservation)
+- [X] T001 [P] Implement IdeaEntry struct, ReadSyncedTaskIDs, and AppendIdeaEntry in internal/ideas/inbox.go (ReadSyncedTaskIDs reads file and parses `- TaskID:` lines into a map for dedup; AppendIdeaEntry appends an entry with H3 heading, Date/Account/TaskID metadata as bullet-list fields, optional description from task notes; auto-create file with `# Idea Inbox` header if missing including parent directories; omit Account field when empty; Date is derived from task.Updated parsed as RFC 3339 and formatted as YYYY-MM-DD per FR-012)
+- [X] T002 [P] Implement unit tests for inbox file operations in internal/ideas/inbox_test.go (test ReadSyncedTaskIDs with existing entries, empty file, and missing file; test AppendIdeaEntry with and without description, with and without Account, auto-create with header, parent directory creation, existing content preservation)
 
 **Checkpoint**: Inbox file I/O is independently testable with `go test ./internal/ideas/`
 
@@ -55,8 +55,8 @@ func SyncIdeas(client *tasks.Client, accountName string, listName string, inboxP
 
 ### Implementation for User Story 1
 
-- [ ] T003 [US1] Implement SyncIdeas function in internal/ideas/sync.go (signature: `func SyncIdeas(client *tasks.Client, accountName, listName, inboxPath string) (int, error)`; uses client.FindTaskListByName to find the Ideas list, returns 0 if not found; calls client.ListTasks, calls ReadSyncedTaskIDs for dedup, builds IdeaEntry from each task with Date from task.Updated, calls AppendIdeaEntry for new entries, calls client.DeleteTask after successful write; returns count of synced ideas)
-- [ ] T004 [US1] Implement unit tests for SyncIdeas in internal/ideas/sync_test.go (test sync with new tasks, dedup skip, delete-after-write ordering, missing list returns 0, API error handling)
+- [X] T003 [US1] Implement SyncIdeas function in internal/ideas/sync.go (signature: `func SyncIdeas(client *tasks.Client, accountName, listName, inboxPath string) (int, error)`; uses client.FindTaskListByName to find the Ideas list, returns 0 if not found; calls client.ListTasks, calls ReadSyncedTaskIDs for dedup, builds IdeaEntry from each task with Date from task.Updated, calls AppendIdeaEntry for new entries, calls client.DeleteTask after successful write; returns count of synced ideas)
+- [X] T004 [US1] Implement unit tests for SyncIdeas in internal/ideas/sync_test.go (test sync with new tasks, dedup skip, delete-after-write ordering, missing list returns 0, API error handling)
 - [ ] T005 [US1] Add syncIdeasToInbox method to Workflow in internal/alfred/workflow.go (read IDEA_INBOX_PATH and IDEA_LIST_NAME from os.Getenv, early-return if either is empty; create tasks.Client using getAuthenticatedClient; call ideas.SyncIdeas(client, accountCtx.Name, listName, inboxPath); wrap entire method in deferred recover to swallow panics; log errors to stderr via fmt.Fprintf)
 - [ ] T006 [US1] Wire syncIdeasToInbox into handleList in internal/alfred/workflow.go (call syncIdeasToInbox after requireAuth check but before fetchTasksForCurrentAccount, for single-account mode only)
 
