@@ -780,6 +780,63 @@ func (w *Workflow) syncIdeasToInbox() {
 	}
 }
 
+// syncIdeasAllAccounts syncs ideas from ALL authenticated accounts' Ideas lists
+// to the Obsidian inbox file. Used in multi-account mode so that ideas from every
+// account are captured regardless of which account is targeted. Silently skips
+// unauthenticated or erroring accounts (FR-009).
+func (w *Workflow) syncIdeasAllAccounts() {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Fprintf(os.Stderr, "idea sync panic: %v\n", r)
+		}
+	}()
+
+	inboxPath := os.Getenv("IDEA_INBOX_PATH")
+	listName := os.Getenv("IDEA_LIST_NAME")
+	if inboxPath == "" || listName == "" {
+		return
+	}
+
+	for _, name := range w.AccountConfig.AccountNames() {
+		ctx, err := auth.ResolveAccount(w.AccountConfig, name)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "idea sync: resolve %s: %v\n", name, err)
+			continue
+		}
+
+		if !auth.TokenExists(ctx.DataDir) {
+			continue
+		}
+
+		config, err := auth.LoadClientCredentialsFrom(ctx.CredentialsPath)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "idea sync: credentials %s: %v\n", name, err)
+			continue
+		}
+
+		token, err := auth.EnsureValidToken(ctx.DataDir, config)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "idea sync: token %s: %v\n", name, err)
+			continue
+		}
+
+		client, err := tasks.NewClient(token, config)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "idea sync: client %s: %v\n", name, err)
+			continue
+		}
+
+		count, err := ideas.SyncIdeas(client, name, listName, inboxPath)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "idea sync: %s: %v\n", name, err)
+			continue
+		}
+		if count > 0 {
+			fmt.Fprintf(os.Stderr, "idea sync: synced %d ideas from %s/%s\n", count, name, listName)
+		}
+	}
+}
+
 // handleOpen opens Google Tasks in the browser.
 func (w *Workflow) handleOpen() {
 	if err := tasks.OpenGoogleTasks(w.AccountCtx.ProfileIndex); err != nil {
