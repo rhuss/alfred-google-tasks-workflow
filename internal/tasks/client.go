@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"golang.org/x/oauth2"
 	"google.golang.org/api/googleapi"
@@ -22,6 +23,7 @@ func NewClient(token *oauth2.Token, config *oauth2.Config) (*Client, error) {
 	ctx := context.Background()
 	tokenSource := config.TokenSource(ctx, token)
 	httpClient := oauth2.NewClient(ctx, tokenSource)
+	httpClient.Timeout = 30 * time.Second
 
 	service, err := tasks.NewService(ctx, option.WithHTTPClient(httpClient))
 	if err != nil {
