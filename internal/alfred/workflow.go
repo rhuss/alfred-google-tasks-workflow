@@ -583,7 +583,11 @@ func (w *Workflow) handleList(args []string) {
 		return
 	}
 
-	w.syncIdeasToInbox()
+	if w.AccountConfig != nil {
+		w.syncIdeasAllAccounts()
+	} else {
+		w.syncIdeasToInbox()
+	}
 
 	items, err := w.fetchTasksForCurrentAccount(listFilter)
 	if err != nil {
@@ -618,6 +622,8 @@ func (w *Workflow) shouldListAllAccounts() bool {
 // handleListAllAccounts fetches tasks from all configured accounts sequentially,
 // tags each task with its account name, and renders the merged result.
 func (w *Workflow) handleListAllAccounts(listFilter string) {
+	w.syncIdeasAllAccounts()
+
 	var allItems []tasks.TaskItem
 	var warnings []string
 

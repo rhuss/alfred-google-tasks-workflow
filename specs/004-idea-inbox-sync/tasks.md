@@ -73,7 +73,7 @@ func SyncIdeas(client *tasks.Client, accountName string, listName string, inboxP
 ### Implementation for User Story 2
 
 - [X] T007 [US2] Implement syncIdeasAllAccounts method on Workflow in internal/alfred/workflow.go (read IDEA_INBOX_PATH and IDEA_LIST_NAME from env, early-return if either unset; iterate AccountConfig.AccountNames(); for each: call auth.ResolveAccount, check auth.TokenExists, load credentials via auth.LoadClientCredentialsFrom and auth.EnsureValidToken, create tasks.Client, call ideas.SyncIdeas with the account name; skip unauthenticated or erroring accounts silently; wrap in deferred recover)
-- [ ] T008 [US2] Wire syncIdeasAllAccounts into handleList and handleListAllAccounts in internal/alfred/workflow.go (in multi-account mode: call syncIdeasAllAccounts before any task fetching in both handleList and handleListAllAccounts; in single-account mode: keep syncIdeasToInbox from T005; the sync always runs for all accounts regardless of @account targeting or list_default setting)
+- [X] T008 [US2] Wire syncIdeasAllAccounts into handleList and handleListAllAccounts in internal/alfred/workflow.go (in multi-account mode: call syncIdeasAllAccounts before any task fetching in both handleList and handleListAllAccounts; in single-account mode: keep syncIdeasToInbox from T005; the sync always runs for all accounts regardless of @account targeting or list_default setting)
 
 **Checkpoint**: Multi-account idea sync works, ideas from all accounts appear in the same inbox file
 
