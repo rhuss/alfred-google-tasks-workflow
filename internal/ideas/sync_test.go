@@ -61,7 +61,7 @@ func TestSyncIdeas_NewTasks(t *testing.T) {
 		},
 	}
 
-	count, err := SyncIdeas(client, "personal", "Ideas", inboxPath)
+	count, err := SyncIdeas(client, "personal", []string{"Ideas"}, inboxPath)
 	if err != nil {
 		t.Fatalf("SyncIdeas() error = %v", err)
 	}
@@ -129,7 +129,7 @@ func TestSyncIdeas_DedupSkip(t *testing.T) {
 		},
 	}
 
-	count, err := SyncIdeas(client, "", "Ideas", inboxPath)
+	count, err := SyncIdeas(client, "", []string{"Ideas"}, inboxPath)
 	if err != nil {
 		t.Fatalf("SyncIdeas() error = %v", err)
 	}
@@ -168,7 +168,7 @@ func TestSyncIdeas_DeleteAfterWrite(t *testing.T) {
 		},
 	}
 
-	count, err := SyncIdeas(client, "work", "Ideas", inboxPath)
+	count, err := SyncIdeas(client, "work", []string{"Ideas"}, inboxPath)
 	if err != nil {
 		t.Fatalf("SyncIdeas() error = %v", err)
 	}
@@ -194,7 +194,7 @@ func TestSyncIdeas_MissingListReturnsZero(t *testing.T) {
 		taskLists: map[string]*taskapi.TaskList{},
 	}
 
-	count, err := SyncIdeas(client, "", "Ideas", inboxPath)
+	count, err := SyncIdeas(client, "", []string{"Ideas"}, inboxPath)
 	if err != nil {
 		t.Fatalf("SyncIdeas() error = %v", err)
 	}
@@ -215,9 +215,12 @@ func TestSyncIdeas_FindListError(t *testing.T) {
 		findErr: fmt.Errorf("network error"),
 	}
 
-	_, err := SyncIdeas(client, "", "Ideas", inboxPath)
-	if err == nil {
-		t.Fatal("expected error from FindTaskListByName failure")
+	count, err := SyncIdeas(client, "", []string{"Ideas"}, inboxPath)
+	if err != nil {
+		t.Fatalf("SyncIdeas should not return error for per-list failures, got %v", err)
+	}
+	if count != 0 {
+		t.Errorf("expected 0 synced, got %d", count)
 	}
 }
 
@@ -232,9 +235,12 @@ func TestSyncIdeas_ListTasksError(t *testing.T) {
 		listErr: fmt.Errorf("api error"),
 	}
 
-	_, err := SyncIdeas(client, "", "Ideas", inboxPath)
-	if err == nil {
-		t.Fatal("expected error from ListTasks failure")
+	count, err := SyncIdeas(client, "", []string{"Ideas"}, inboxPath)
+	if err != nil {
+		t.Fatalf("SyncIdeas should not return error for per-list failures, got %v", err)
+	}
+	if count != 0 {
+		t.Errorf("expected 0 synced, got %d", count)
 	}
 }
 
@@ -255,7 +261,7 @@ func TestSyncIdeas_DeleteErrorContinues(t *testing.T) {
 		deleteErr: fmt.Errorf("delete failed"),
 	}
 
-	count, err := SyncIdeas(client, "", "Ideas", inboxPath)
+	count, err := SyncIdeas(client, "", []string{"Ideas"}, inboxPath)
 	if err != nil {
 		t.Fatalf("SyncIdeas() should not return error on delete failure, got %v", err)
 	}
@@ -286,7 +292,7 @@ func TestSyncIdeas_SkipsEmptyTitles(t *testing.T) {
 		},
 	}
 
-	count, err := SyncIdeas(client, "", "Ideas", inboxPath)
+	count, err := SyncIdeas(client, "", []string{"Ideas"}, inboxPath)
 	if err != nil {
 		t.Fatalf("SyncIdeas() error = %v", err)
 	}
@@ -300,7 +306,7 @@ func TestSyncIdeas_EmptyInboxPath(t *testing.T) {
 		findErr: fmt.Errorf("should not be called"),
 	}
 
-	count, err := SyncIdeas(client, "", "Ideas", "")
+	count, err := SyncIdeas(client, "", []string{"Ideas"}, "")
 	if err != nil {
 		t.Fatalf("SyncIdeas() error = %v", err)
 	}
@@ -314,7 +320,7 @@ func TestSyncIdeas_EmptyListName(t *testing.T) {
 		findErr: fmt.Errorf("should not be called"),
 	}
 
-	count, err := SyncIdeas(client, "", "", "/some/path.md")
+	count, err := SyncIdeas(client, "", nil, "/some/path.md")
 	if err != nil {
 		t.Fatalf("SyncIdeas() error = %v", err)
 	}
@@ -328,7 +334,7 @@ func TestSyncIdeas_BothEmpty(t *testing.T) {
 		findErr: fmt.Errorf("should not be called"),
 	}
 
-	count, err := SyncIdeas(client, "", "", "")
+	count, err := SyncIdeas(client, "", nil, "")
 	if err != nil {
 		t.Fatalf("SyncIdeas() error = %v", err)
 	}
@@ -350,11 +356,76 @@ func TestSyncIdeas_EmptyTaskList(t *testing.T) {
 		},
 	}
 
-	count, err := SyncIdeas(client, "", "Ideas", inboxPath)
+	count, err := SyncIdeas(client, "", []string{"Ideas"}, inboxPath)
 	if err != nil {
 		t.Fatalf("SyncIdeas() error = %v", err)
 	}
 	if count != 0 {
 		t.Errorf("SyncIdeas() count = %d, want 0", count)
+	}
+}
+
+func TestSyncIdeas_MultipleLists(t *testing.T) {
+	dir := t.TempDir()
+	inboxPath := filepath.Join(dir, "inbox.md")
+
+	client := &mockTasksClient{
+		taskLists: map[string]*taskapi.TaskList{
+			"Ideas": {Id: "list1", Title: "Ideas"},
+			"Ideen": {Id: "list2", Title: "Ideen"},
+		},
+		tasks: map[string][]*taskapi.Task{
+			"list1": {
+				{Id: "task1", Title: "English idea", Updated: "2026-07-13T10:00:00Z"},
+			},
+			"list2": {
+				{Id: "task2", Title: "German idea", Updated: "2026-07-13T11:00:00Z"},
+			},
+		},
+	}
+
+	count, err := SyncIdeas(client, "personal", []string{"Ideas", "Ideen"}, inboxPath)
+	if err != nil {
+		t.Fatalf("SyncIdeas() error = %v", err)
+	}
+	if count != 2 {
+		t.Errorf("SyncIdeas() count = %d, want 2", count)
+	}
+
+	ids, _ := ReadSyncedTaskIDs(inboxPath)
+	if !ids["task1"] || !ids["task2"] {
+		t.Error("expected both task1 and task2 in inbox")
+	}
+
+	if len(client.deleted) != 2 {
+		t.Fatalf("expected 2 deletes, got %d", len(client.deleted))
+	}
+}
+
+func TestParseListNames(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected []string
+	}{
+		{"Ideas", []string{"Ideas"}},
+		{"Ideas, Ideen", []string{"Ideas", "Ideen"}},
+		{"Ideas,Idea,Ideen,Idee", []string{"Ideas", "Idea", "Ideen", "Idee"}},
+		{" Ideas , Ideen , ", []string{"Ideas", "Ideen"}},
+		{"", nil},
+		{"  ", nil},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := ParseListNames(tt.input)
+			if len(got) != len(tt.expected) {
+				t.Fatalf("ParseListNames(%q) = %v, want %v", tt.input, got, tt.expected)
+			}
+			for i := range got {
+				if got[i] != tt.expected[i] {
+					t.Errorf("ParseListNames(%q)[%d] = %q, want %q", tt.input, i, got[i], tt.expected[i])
+				}
+			}
+		})
 	}
 }

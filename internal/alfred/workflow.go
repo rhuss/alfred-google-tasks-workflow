@@ -754,8 +754,8 @@ func (w *Workflow) syncIdeasToInbox() {
 	}()
 
 	inboxPath := os.Getenv("IDEA_INBOX_PATH")
-	listName := os.Getenv("IDEA_LIST_NAME")
-	if inboxPath == "" || listName == "" {
+	listNames := ideas.ParseListNames(os.Getenv("IDEA_LIST_NAME"))
+	if inboxPath == "" || len(listNames) == 0 {
 		return
 	}
 
@@ -776,13 +776,13 @@ func (w *Workflow) syncIdeasToInbox() {
 		accountName = w.AccountCtx.Name
 	}
 
-	count, err := ideas.SyncIdeas(client, accountName, listName, inboxPath)
+	count, err := ideas.SyncIdeas(client, accountName, listNames, inboxPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "idea sync: %v\n", err)
 		return
 	}
 	if count > 0 {
-		fmt.Fprintf(os.Stderr, "idea sync: synced %d ideas from %s\n", count, listName)
+		fmt.Fprintf(os.Stderr, "idea sync: synced %d ideas\n", count)
 	}
 }
 
@@ -798,8 +798,8 @@ func (w *Workflow) syncIdeasAllAccounts() {
 	}()
 
 	inboxPath := os.Getenv("IDEA_INBOX_PATH")
-	listName := os.Getenv("IDEA_LIST_NAME")
-	if inboxPath == "" || listName == "" {
+	listNames := ideas.ParseListNames(os.Getenv("IDEA_LIST_NAME"))
+	if inboxPath == "" || len(listNames) == 0 {
 		return
 	}
 
@@ -832,13 +832,13 @@ func (w *Workflow) syncIdeasAllAccounts() {
 			continue
 		}
 
-		count, err := ideas.SyncIdeas(client, name, listName, inboxPath)
+		count, err := ideas.SyncIdeas(client, name, listNames, inboxPath)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "idea sync: %s: %v\n", name, err)
 			continue
 		}
 		if count > 0 {
-			fmt.Fprintf(os.Stderr, "idea sync: synced %d ideas from %s/%s\n", count, name, listName)
+			fmt.Fprintf(os.Stderr, "idea sync: synced %d ideas from %s\n", count, name)
 		}
 	}
 }
