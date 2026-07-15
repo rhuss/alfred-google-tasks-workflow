@@ -23,6 +23,7 @@ var (
 	iconDelete   = &aw.Icon{Value: "icons/delete.png"}
 	iconOpen     = &aw.Icon{Value: "icons/open.png"}
 	iconMove     = &aw.Icon{Value: "icons/move.png"}
+	iconIdea     = &aw.Icon{Value: "icons/idea.png"}
 )
 
 func iconForTimeframe(tf tasks.Timeframe) *aw.Icon {
@@ -141,6 +142,18 @@ func (w *Workflow) RenderActionMenu(listID, taskID, accountName string, accountC
 		completeItem.Var("accountName", accountName)
 		deleteItem.Var("accountName", accountName)
 		openItem.Var("accountName", accountName)
+	}
+
+	// Add "Move to Inbox" when idea inbox is configured
+	if inboxPath := os.Getenv("IDEA_INBOX_PATH"); inboxPath != "" {
+		inboxItem := w.WF.NewItem("Move to Inbox").
+			Subtitle("Capture this task as an idea in Obsidian").
+			Arg("inbox|" + actionRef).
+			Icon(iconIdea).
+			Valid(true)
+		if accountName != "" {
+			inboxItem.Var("accountName", accountName)
+		}
 	}
 
 	// Add "Move to {target}" entries when multi-account mode is active

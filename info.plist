@@ -266,7 +266,7 @@
 				<key>escaping</key>
 				<integer>102</integer>
 				<key>script</key>
-				<string>input="${1}"; case "$input" in create:*) ./gtasks create "${input#create:}" ;; cmd:*) ./gtasks "${input#cmd:}" ;; esac</string>
+				<string>input="${1}"; case "$input" in create:*) ./gtasks create "${input#create:}" ;; cmd:*) ./gtasks action "$input" ;; esac</string>
 				<key>scriptargtype</key>
 				<integer>1</integer>
 				<key>scriptfile</key>
@@ -650,6 +650,48 @@ Add `#ListName` at the end to target a list. Lists are auto-created if new. Hyph
 			<string>textfield</string>
 			<key>variable</key>
 			<string>QUICK_ADD_2_ACCOUNT</string>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>default</key>
+				<string></string>
+				<key>placeholder</key>
+				<string>~/Obsidian/vault/idea-inbox.md</string>
+				<key>required</key>
+				<false/>
+				<key>trim</key>
+				<true/>
+			</dict>
+			<key>description</key>
+			<string>Full path to the Obsidian markdown file where ideas are synced. Leave empty to disable idea sync. The file is auto-created if it doesn't exist.</string>
+			<key>label</key>
+			<string>Idea Inbox Path</string>
+			<key>type</key>
+			<string>textfield</string>
+			<key>variable</key>
+			<string>IDEA_INBOX_PATH</string>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>default</key>
+				<string>Inbox</string>
+				<key>placeholder</key>
+				<string>e.g. Inbox, Ideas, Ideen</string>
+				<key>required</key>
+				<false/>
+				<key>trim</key>
+				<true/>
+			</dict>
+			<key>description</key>
+			<string>Comma-separated list of Google Tasks list names to sync ideas from (e.g. "Inbox, Ideas, Ideen"). Tasks in these lists are automatically moved to the Idea Inbox file during every "gt list". Leave empty to disable.</string>
+			<key>label</key>
+			<string>Idea List Name</string>
+			<key>type</key>
+			<string>textfield</string>
+			<key>variable</key>
+			<string>IDEA_LIST_NAME</string>
 		</dict>
 	</array>
 	<key>version</key>

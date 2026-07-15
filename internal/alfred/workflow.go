@@ -10,8 +10,10 @@ import (
 	aw "github.com/deanishe/awgo"
 
 	"github.com/rhuss/alfred-google-tasks-workflow/internal/auth"
+	"github.com/rhuss/alfred-google-tasks-workflow/internal/ideas"
 	"github.com/rhuss/alfred-google-tasks-workflow/internal/input"
 	"github.com/rhuss/alfred-google-tasks-workflow/internal/tasks"
+	taskapi "google.golang.org/api/tasks/v1"
 )
 
 // Workflow wraps the AwGo workflow instance and provides command routing.
@@ -550,6 +552,11 @@ func (w *Workflow) handleAdd(args []string) {
 		return
 	}
 
+	if w.addToIdeaInbox(client, created, listName) {
+		NotifySuccess("Google Tasks", fmt.Sprintf("Idea captured: %s", created.Title))
+		return
+	}
+
 	subtitle := fmt.Sprintf("Added to %s", listName)
 	if len(created.Due) >= 10 {
 		subtitle += fmt.Sprintf(" (due %s)", created.Due[:10])
@@ -595,6 +602,11 @@ func (w *Workflow) handleList(args []string) {
 
 	grouped := tasks.GroupTasksByTimeframe(items, time.Now())
 	w.RenderGroupedTasks(grouped)
+
+	w.syncIdeasFromFetched(items)
+	if w.AccountConfig != nil {
+		w.syncIdeasAllAccounts()
+	}
 }
 
 // shouldListAllAccounts returns true when the listing should merge tasks
@@ -654,14 +666,12 @@ func (w *Workflow) handleListAllAccounts(listFilter string) {
 	w.AccountCtx = originalCtx
 
 	if len(allItems) == 0 && len(warnings) == 0 {
-		// No tasks and no warnings: show empty state via RenderGroupedTasks
 		grouped := tasks.GroupTasksByTimeframe(allItems, time.Now())
 		w.RenderGroupedTasks(grouped)
 		return
 	}
 
 	if len(allItems) == 0 && len(warnings) > 0 {
-		// Only warnings, no tasks: show warnings directly
 		for _, warning := range warnings {
 			w.WF.NewItem("Account warning").
 				Subtitle(warning).
@@ -672,10 +682,10 @@ func (w *Workflow) handleListAllAccounts(listFilter string) {
 		return
 	}
 
-	// Has tasks: render them, then append any warnings.
-	// RenderGroupedTasks calls SendFeedback, so we add warnings before it.
 	grouped := tasks.GroupTasksByTimeframe(allItems, time.Now())
 	w.renderGroupedTasksWithWarnings(grouped, warnings)
+
+	w.syncIdeasFromFetched(allItems)
 }
 
 // renderGroupedTasksWithWarnings renders grouped tasks and appends warning items
@@ -735,6 +745,262 @@ func (w *Workflow) fetchTasksForCurrentAccount(listFilter string) ([]tasks.TaskI
 	return client.FetchAllTasks()
 }
 
+// addToIdeaInbox checks if a newly created task belongs to a configured idea
+// list. If so, it writes the task directly to the inbox file and deletes it
+// from Google Tasks. Returns true if the task was handled as an idea.
+func (w *Workflow) addToIdeaInbox(client *tasks.Client, task *taskapi.Task, listName string) bool {
+	inboxPath := os.Getenv("IDEA_INBOX_PATH")
+	listNames := ideas.ParseListNames(os.Getenv("IDEA_LIST_NAME"))
+	if inboxPath == "" || len(listNames) == 0 {
+		return false
+	}
+
+	match := false
+	lowerListName := strings.ToLower(listName)
+	for _, name := range listNames {
+		if strings.ToLower(name) == lowerListName {
+			match = true
+			break
+		}
+	}
+	if !match {
+		return false
+	}
+
+	accountName := ""
+	if w.AccountConfig != nil && w.AccountCtx.Name != "" {
+		accountName = w.AccountCtx.Name
+	}
+
+	entry := ideas.IdeaEntry{
+		Title:       task.Title,
+		Date:        ideas.FormatDate(task.Updated),
+		Account:     accountName,
+		TaskID:      task.Id,
+		Description: task.Notes,
+	}
+
+	if err := ideas.AppendIdeaEntry(inboxPath, entry); err != nil {
+		fmt.Fprintf(os.Stderr, "idea inbox: failed to write: %v\n", err)
+		return false
+	}
+
+	list, err := client.FindTaskListByName(listName)
+	if err == nil && list != nil {
+		if delErr := client.DeleteTask(list.Id, task.Id); delErr != nil {
+			fmt.Fprintf(os.Stderr, "idea inbox: failed to delete from tasks: %v\n", delErr)
+		}
+	}
+
+	return true
+}
+
+// syncIdeasFromFetched scans already-fetched task items for ideas (tasks in a
+// configured idea list), writes them to the inbox, and deletes from Google Tasks.
+// Runs after SendFeedback so the user sees the list immediately.
+func (w *Workflow) syncIdeasFromFetched(items []tasks.TaskItem) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Fprintf(os.Stderr, "idea sync panic: %v\n", r)
+		}
+	}()
+
+	inboxPath := os.Getenv("IDEA_INBOX_PATH")
+	listNames := ideas.ParseListNames(os.Getenv("IDEA_LIST_NAME"))
+	if inboxPath == "" || len(listNames) == 0 {
+		return
+	}
+
+	ideaListSet := make(map[string]bool)
+	for _, name := range listNames {
+		ideaListSet[strings.ToLower(name)] = true
+	}
+
+	var ideaItems []tasks.TaskItem
+	for _, item := range items {
+		if ideaListSet[strings.ToLower(item.ListName)] {
+			ideaItems = append(ideaItems, item)
+		}
+	}
+
+	if len(ideaItems) == 0 {
+		return
+	}
+
+	existingIDs, err := ideas.ReadSyncedTaskIDs(inboxPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "idea sync: reading IDs: %v\n", err)
+		return
+	}
+
+	synced := 0
+	for _, item := range ideaItems {
+		if existingIDs[item.Task.Id] {
+			continue
+		}
+
+		entry := ideas.IdeaEntry{
+			Title:       item.Task.Title,
+			Date:        ideas.FormatDate(item.Task.Updated),
+			Account:     item.AccountName,
+			TaskID:      item.Task.Id,
+			Description: item.Task.Notes,
+		}
+
+		if err := ideas.AppendIdeaEntry(inboxPath, entry); err != nil {
+			fmt.Fprintf(os.Stderr, "idea sync: write %q: %v\n", item.Task.Title, err)
+			continue
+		}
+
+		w.deleteTaskSilently(item)
+		synced++
+	}
+
+	if synced > 0 {
+		fmt.Fprintf(os.Stderr, "idea sync: synced %d ideas from displayed tasks\n", synced)
+	}
+}
+
+// deleteTaskSilently deletes a task, creating a client for the correct account.
+func (w *Workflow) deleteTaskSilently(item tasks.TaskItem) {
+	var client *tasks.Client
+	var err error
+
+	if item.AccountName != "" && w.AccountConfig != nil {
+		ctx, resolveErr := auth.ResolveAccount(w.AccountConfig, item.AccountName)
+		if resolveErr != nil {
+			fmt.Fprintf(os.Stderr, "idea sync: resolve %s: %v\n", item.AccountName, resolveErr)
+			return
+		}
+		config, credErr := auth.LoadClientCredentialsFrom(ctx.CredentialsPath)
+		if credErr != nil {
+			fmt.Fprintf(os.Stderr, "idea sync: creds %s: %v\n", item.AccountName, credErr)
+			return
+		}
+		token, tokenErr := auth.EnsureValidToken(ctx.DataDir, config)
+		if tokenErr != nil {
+			fmt.Fprintf(os.Stderr, "idea sync: token %s: %v\n", item.AccountName, tokenErr)
+			return
+		}
+		client, err = tasks.NewClient(token, config)
+	} else {
+		authConfig, authErr := w.getAuthenticatedClient()
+		if authErr != nil {
+			fmt.Fprintf(os.Stderr, "idea sync: auth: %v\n", authErr)
+			return
+		}
+		client, err = tasks.NewClient(authConfig.Token, authConfig.Config)
+	}
+
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "idea sync: client: %v\n", err)
+		return
+	}
+
+	if delErr := client.DeleteTask(item.ListID, item.Task.Id); delErr != nil {
+		fmt.Fprintf(os.Stderr, "idea sync: delete %q: %v\n", item.Task.Title, delErr)
+	}
+}
+
+// syncIdeasToInbox syncs ideas from the current account's Ideas list to the
+// Obsidian inbox file. Silently returns on any error (FR-009).
+func (w *Workflow) syncIdeasToInbox() {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Fprintf(os.Stderr, "idea sync panic: %v\n", r)
+		}
+	}()
+
+	inboxPath := os.Getenv("IDEA_INBOX_PATH")
+	listNames := ideas.ParseListNames(os.Getenv("IDEA_LIST_NAME"))
+	if inboxPath == "" || len(listNames) == 0 {
+		return
+	}
+
+	authConfig, err := w.getAuthenticatedClient()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "idea sync auth: %v\n", err)
+		return
+	}
+
+	client, err := tasks.NewClient(authConfig.Token, authConfig.Config)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "idea sync client: %v\n", err)
+		return
+	}
+
+	accountName := ""
+	if w.AccountConfig != nil && w.AccountCtx.Name != "" {
+		accountName = w.AccountCtx.Name
+	}
+
+	count, err := ideas.SyncIdeas(client, accountName, listNames, inboxPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "idea sync: %v\n", err)
+		return
+	}
+	if count > 0 {
+		fmt.Fprintf(os.Stderr, "idea sync: synced %d ideas\n", count)
+	}
+}
+
+// syncIdeasAllAccounts syncs ideas from ALL authenticated accounts' Ideas lists
+// to the Obsidian inbox file. Used in multi-account mode so that ideas from every
+// account are captured regardless of which account is targeted. Silently skips
+// unauthenticated or erroring accounts (FR-009).
+func (w *Workflow) syncIdeasAllAccounts() {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Fprintf(os.Stderr, "idea sync panic: %v\n", r)
+		}
+	}()
+
+	inboxPath := os.Getenv("IDEA_INBOX_PATH")
+	listNames := ideas.ParseListNames(os.Getenv("IDEA_LIST_NAME"))
+	if inboxPath == "" || len(listNames) == 0 {
+		return
+	}
+
+	for _, name := range w.AccountConfig.AccountNames() {
+		ctx, err := auth.ResolveAccount(w.AccountConfig, name)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "idea sync: resolve %s: %v\n", name, err)
+			continue
+		}
+
+		if !auth.TokenExists(ctx.DataDir) {
+			continue
+		}
+
+		config, err := auth.LoadClientCredentialsFrom(ctx.CredentialsPath)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "idea sync: credentials %s: %v\n", name, err)
+			continue
+		}
+
+		token, err := auth.EnsureValidToken(ctx.DataDir, config)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "idea sync: token %s: %v\n", name, err)
+			continue
+		}
+
+		client, err := tasks.NewClient(token, config)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "idea sync: client %s: %v\n", name, err)
+			continue
+		}
+
+		count, err := ideas.SyncIdeas(client, name, listNames, inboxPath)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "idea sync: %s: %v\n", name, err)
+			continue
+		}
+		if count > 0 {
+			fmt.Fprintf(os.Stderr, "idea sync: synced %d ideas from %s\n", count, name)
+		}
+	}
+}
+
 // handleOpen opens Google Tasks in the browser.
 func (w *Workflow) handleOpen() {
 	if err := tasks.OpenGoogleTasks(w.AccountCtx.ProfileIndex); err != nil {
@@ -757,6 +1023,21 @@ func (w *Workflow) handleAction(args []string) {
 	// accountName variable that was propagated through item vars.
 	// This must run before any action dispatch (including create:).
 	w.resolveAccountFromEnv()
+
+	// Handle cmd: prefixed actions (login, logout, open) from the Run Script.
+	if strings.HasPrefix(actionArg, "cmd:") {
+		switch actionArg[4:] {
+		case "login":
+			w.handleLogin()
+		case "logout":
+			w.handleLogout()
+		case "open":
+			w.handleOpen()
+		default:
+			NotifyError("Google Tasks", fmt.Sprintf("Unknown command: %s", actionArg[4:]))
+		}
+		return
+	}
 
 	// Task creation is routed to the run-create Run Script via the Conditional.
 	// This fallback handles it if the routing doesn't match.
@@ -821,6 +1102,12 @@ func (w *Workflow) executeAction(action, listID, taskID string) {
 		return
 	}
 
+	// Handle "inbox" action: move task to Obsidian idea inbox
+	if action == "inbox" {
+		w.executeInboxAction(listID, taskID)
+		return
+	}
+
 	// Handle move:{targetAccount} action
 	if strings.HasPrefix(action, "move:") {
 		w.executeMoveAction(action, listID, taskID)
@@ -865,6 +1152,63 @@ func (w *Workflow) executeAction(action, listID, taskID string) {
 	default:
 		NotifyError("Google Tasks", fmt.Sprintf("Unknown action: %s", action))
 	}
+}
+
+// executeInboxAction moves a task to the Obsidian idea inbox and deletes it
+// from Google Tasks.
+func (w *Workflow) executeInboxAction(listID, taskID string) {
+	inboxPath := os.Getenv("IDEA_INBOX_PATH")
+	if inboxPath == "" {
+		NotifyError("Google Tasks", "IDEA_INBOX_PATH not configured")
+		return
+	}
+
+	if !w.requireAuth() {
+		return
+	}
+
+	authConfig, err := w.getAuthenticatedClient()
+	if err != nil {
+		NotifyError("Google Tasks", fmt.Sprintf("Auth error: %v", err))
+		return
+	}
+
+	client, err := tasks.NewClient(authConfig.Token, authConfig.Config)
+	if err != nil {
+		NotifyError("Google Tasks", fmt.Sprintf("Client error: %v", err))
+		return
+	}
+
+	task, err := client.GetTask(listID, taskID)
+	if err != nil {
+		NotifyError("Google Tasks", fmt.Sprintf("Failed to get task: %v", err))
+		return
+	}
+
+	accountName := ""
+	if w.AccountConfig != nil && w.AccountCtx.Name != "" {
+		accountName = w.AccountCtx.Name
+	}
+
+	entry := ideas.IdeaEntry{
+		Title:       task.Title,
+		Date:        ideas.FormatDate(task.Updated),
+		Account:     accountName,
+		TaskID:      task.Id,
+		Description: task.Notes,
+	}
+
+	if err := ideas.AppendIdeaEntry(inboxPath, entry); err != nil {
+		NotifyError("Google Tasks", fmt.Sprintf("Failed to write to inbox: %v", err))
+		return
+	}
+
+	if err := client.DeleteTask(listID, taskID); err != nil {
+		NotifyError("Google Tasks", fmt.Sprintf("Moved to inbox but failed to delete: %v", err))
+		return
+	}
+
+	NotifySuccess("Google Tasks", fmt.Sprintf("Idea captured: %s", task.Title))
 }
 
 // executeMoveAction handles the "move:{targetAccount}" action by creating the
