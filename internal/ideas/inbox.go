@@ -64,7 +64,7 @@ func ReadSyncedTaskIDs(inboxPath string) (map[string]bool, error) {
 // AppendIdeaEntry appends an idea entry to the inbox file.
 // Creates the file with a header if it does not exist.
 func AppendIdeaEntry(inboxPath string, entry IdeaEntry) error {
-	if err := ensureInboxFile(inboxPath); err != nil {
+	if err := EnsureInboxFile(inboxPath); err != nil {
 		return err
 	}
 
@@ -97,8 +97,8 @@ func AppendIdeaEntry(inboxPath string, entry IdeaEntry) error {
 	return nil
 }
 
-// ensureInboxFile creates the inbox file with a header if it does not exist.
-func ensureInboxFile(inboxPath string) error {
+// EnsureInboxFile creates the inbox file with a header if it does not exist.
+func EnsureInboxFile(inboxPath string) error {
 	if _, err := os.Stat(inboxPath); err == nil {
 		return nil
 	}

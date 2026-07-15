@@ -41,6 +41,10 @@ func SyncIdeas(client TasksClient, accountName string, listNames []string, inbox
 		return 0, nil
 	}
 
+	if err := EnsureInboxFile(inboxPath); err != nil {
+		return 0, fmt.Errorf("creating inbox file: %w", err)
+	}
+
 	existingIDs, err := ReadSyncedTaskIDs(inboxPath)
 	if err != nil {
 		return 0, fmt.Errorf("reading synced task IDs: %w", err)

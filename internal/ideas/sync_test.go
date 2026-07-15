@@ -202,8 +202,8 @@ func TestSyncIdeas_MissingListReturnsZero(t *testing.T) {
 		t.Errorf("SyncIdeas() count = %d, want 0 for missing list", count)
 	}
 
-	if _, err := os.Stat(inboxPath); !os.IsNotExist(err) {
-		t.Error("inbox file should not be created when list is missing")
+	if _, err := os.Stat(inboxPath); os.IsNotExist(err) {
+		t.Error("inbox file should be created even when no ideas are found")
 	}
 }
 
