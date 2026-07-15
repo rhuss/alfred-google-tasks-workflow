@@ -866,6 +866,21 @@ func (w *Workflow) handleAction(args []string) {
 	// This must run before any action dispatch (including create:).
 	w.resolveAccountFromEnv()
 
+	// Handle cmd: prefixed actions (login, logout, open) from the Run Script.
+	if strings.HasPrefix(actionArg, "cmd:") {
+		switch actionArg[4:] {
+		case "login":
+			w.handleLogin()
+		case "logout":
+			w.handleLogout()
+		case "open":
+			w.handleOpen()
+		default:
+			NotifyError("Google Tasks", fmt.Sprintf("Unknown command: %s", actionArg[4:]))
+		}
+		return
+	}
+
 	// Task creation is routed to the run-create Run Script via the Conditional.
 	// This fallback handles it if the routing doesn't match.
 	if strings.HasPrefix(actionArg, "create:") {

@@ -266,7 +266,7 @@
 				<key>escaping</key>
 				<integer>102</integer>
 				<key>script</key>
-				<string>input="${1}"; case "$input" in create:*) ./gtasks create "${input#create:}" ;; cmd:*) ./gtasks "${input#cmd:}" ;; esac</string>
+				<string>input="${1}"; case "$input" in create:*) ./gtasks create "${input#create:}" ;; cmd:*) ./gtasks action "$input" ;; esac</string>
 				<key>scriptargtype</key>
 				<integer>1</integer>
 				<key>scriptfile</key>
