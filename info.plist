@@ -695,7 +695,7 @@ Add `#ListName` at the end to target a list. Lists are auto-created if new. Hyph
 		</dict>
 	</array>
 	<key>version</key>
-	<string>1.5.0</string>
+	<string>1.6.0</string>
 	<key>webaddress</key>
 	<string>https://github.com/rhuss/alfred-google-tasks-workflow</string>
 </dict>
