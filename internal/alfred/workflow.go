@@ -1102,6 +1102,12 @@ func (w *Workflow) executeAction(action, listID, taskID string) {
 		return
 	}
 
+	// Handle "inbox" action: move task to Obsidian idea inbox
+	if action == "inbox" {
+		w.executeInboxAction(listID, taskID)
+		return
+	}
+
 	// Handle move:{targetAccount} action
 	if strings.HasPrefix(action, "move:") {
 		w.executeMoveAction(action, listID, taskID)
@@ -1146,6 +1152,63 @@ func (w *Workflow) executeAction(action, listID, taskID string) {
 	default:
 		NotifyError("Google Tasks", fmt.Sprintf("Unknown action: %s", action))
 	}
+}
+
+// executeInboxAction moves a task to the Obsidian idea inbox and deletes it
+// from Google Tasks.
+func (w *Workflow) executeInboxAction(listID, taskID string) {
+	inboxPath := os.Getenv("IDEA_INBOX_PATH")
+	if inboxPath == "" {
+		NotifyError("Google Tasks", "IDEA_INBOX_PATH not configured")
+		return
+	}
+
+	if !w.requireAuth() {
+		return
+	}
+
+	authConfig, err := w.getAuthenticatedClient()
+	if err != nil {
+		NotifyError("Google Tasks", fmt.Sprintf("Auth error: %v", err))
+		return
+	}
+
+	client, err := tasks.NewClient(authConfig.Token, authConfig.Config)
+	if err != nil {
+		NotifyError("Google Tasks", fmt.Sprintf("Client error: %v", err))
+		return
+	}
+
+	task, err := client.GetTask(listID, taskID)
+	if err != nil {
+		NotifyError("Google Tasks", fmt.Sprintf("Failed to get task: %v", err))
+		return
+	}
+
+	accountName := ""
+	if w.AccountConfig != nil && w.AccountCtx.Name != "" {
+		accountName = w.AccountCtx.Name
+	}
+
+	entry := ideas.IdeaEntry{
+		Title:       task.Title,
+		Date:        ideas.FormatDate(task.Updated),
+		Account:     accountName,
+		TaskID:      task.Id,
+		Description: task.Notes,
+	}
+
+	if err := ideas.AppendIdeaEntry(inboxPath, entry); err != nil {
+		NotifyError("Google Tasks", fmt.Sprintf("Failed to write to inbox: %v", err))
+		return
+	}
+
+	if err := client.DeleteTask(listID, taskID); err != nil {
+		NotifyError("Google Tasks", fmt.Sprintf("Moved to inbox but failed to delete: %v", err))
+		return
+	}
+
+	NotifySuccess("Google Tasks", fmt.Sprintf("Idea captured: %s", task.Title))
 }
 
 // executeMoveAction handles the "move:{targetAccount}" action by creating the
