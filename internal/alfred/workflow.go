@@ -589,12 +589,6 @@ func (w *Workflow) handleList(args []string) {
 		return
 	}
 
-	if w.AccountConfig != nil {
-		w.syncIdeasAllAccounts()
-	} else {
-		w.syncIdeasToInbox()
-	}
-
 	items, err := w.fetchTasksForCurrentAccount(listFilter)
 	if err != nil {
 		w.WF.NewItem("Failed to fetch tasks").
@@ -608,6 +602,11 @@ func (w *Workflow) handleList(args []string) {
 
 	grouped := tasks.GroupTasksByTimeframe(items, time.Now())
 	w.RenderGroupedTasks(grouped)
+
+	w.syncIdeasFromFetched(items)
+	if w.AccountConfig != nil {
+		w.syncIdeasAllAccounts()
+	}
 }
 
 // shouldListAllAccounts returns true when the listing should merge tasks
@@ -628,8 +627,6 @@ func (w *Workflow) shouldListAllAccounts() bool {
 // handleListAllAccounts fetches tasks from all configured accounts sequentially,
 // tags each task with its account name, and renders the merged result.
 func (w *Workflow) handleListAllAccounts(listFilter string) {
-	w.syncIdeasAllAccounts()
-
 	var allItems []tasks.TaskItem
 	var warnings []string
 
@@ -669,14 +666,12 @@ func (w *Workflow) handleListAllAccounts(listFilter string) {
 	w.AccountCtx = originalCtx
 
 	if len(allItems) == 0 && len(warnings) == 0 {
-		// No tasks and no warnings: show empty state via RenderGroupedTasks
 		grouped := tasks.GroupTasksByTimeframe(allItems, time.Now())
 		w.RenderGroupedTasks(grouped)
 		return
 	}
 
 	if len(allItems) == 0 && len(warnings) > 0 {
-		// Only warnings, no tasks: show warnings directly
 		for _, warning := range warnings {
 			w.WF.NewItem("Account warning").
 				Subtitle(warning).
@@ -687,10 +682,10 @@ func (w *Workflow) handleListAllAccounts(listFilter string) {
 		return
 	}
 
-	// Has tasks: render them, then append any warnings.
-	// RenderGroupedTasks calls SendFeedback, so we add warnings before it.
 	grouped := tasks.GroupTasksByTimeframe(allItems, time.Now())
 	w.renderGroupedTasksWithWarnings(grouped, warnings)
+
+	w.syncIdeasFromFetched(allItems)
 }
 
 // renderGroupedTasksWithWarnings renders grouped tasks and appends warning items
@@ -798,6 +793,113 @@ func (w *Workflow) addToIdeaInbox(client *tasks.Client, task *taskapi.Task, list
 	}
 
 	return true
+}
+
+// syncIdeasFromFetched scans already-fetched task items for ideas (tasks in a
+// configured idea list), writes them to the inbox, and deletes from Google Tasks.
+// Runs after SendFeedback so the user sees the list immediately.
+func (w *Workflow) syncIdeasFromFetched(items []tasks.TaskItem) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Fprintf(os.Stderr, "idea sync panic: %v\n", r)
+		}
+	}()
+
+	inboxPath := os.Getenv("IDEA_INBOX_PATH")
+	listNames := ideas.ParseListNames(os.Getenv("IDEA_LIST_NAME"))
+	if inboxPath == "" || len(listNames) == 0 {
+		return
+	}
+
+	ideaListSet := make(map[string]bool)
+	for _, name := range listNames {
+		ideaListSet[strings.ToLower(name)] = true
+	}
+
+	var ideaItems []tasks.TaskItem
+	for _, item := range items {
+		if ideaListSet[strings.ToLower(item.ListName)] {
+			ideaItems = append(ideaItems, item)
+		}
+	}
+
+	if len(ideaItems) == 0 {
+		return
+	}
+
+	existingIDs, err := ideas.ReadSyncedTaskIDs(inboxPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "idea sync: reading IDs: %v\n", err)
+		return
+	}
+
+	synced := 0
+	for _, item := range ideaItems {
+		if existingIDs[item.Task.Id] {
+			continue
+		}
+
+		entry := ideas.IdeaEntry{
+			Title:       item.Task.Title,
+			Date:        ideas.FormatDate(item.Task.Updated),
+			Account:     item.AccountName,
+			TaskID:      item.Task.Id,
+			Description: item.Task.Notes,
+		}
+
+		if err := ideas.AppendIdeaEntry(inboxPath, entry); err != nil {
+			fmt.Fprintf(os.Stderr, "idea sync: write %q: %v\n", item.Task.Title, err)
+			continue
+		}
+
+		w.deleteTaskSilently(item)
+		synced++
+	}
+
+	if synced > 0 {
+		fmt.Fprintf(os.Stderr, "idea sync: synced %d ideas from displayed tasks\n", synced)
+	}
+}
+
+// deleteTaskSilently deletes a task, creating a client for the correct account.
+func (w *Workflow) deleteTaskSilently(item tasks.TaskItem) {
+	var client *tasks.Client
+	var err error
+
+	if item.AccountName != "" && w.AccountConfig != nil {
+		ctx, resolveErr := auth.ResolveAccount(w.AccountConfig, item.AccountName)
+		if resolveErr != nil {
+			fmt.Fprintf(os.Stderr, "idea sync: resolve %s: %v\n", item.AccountName, resolveErr)
+			return
+		}
+		config, credErr := auth.LoadClientCredentialsFrom(ctx.CredentialsPath)
+		if credErr != nil {
+			fmt.Fprintf(os.Stderr, "idea sync: creds %s: %v\n", item.AccountName, credErr)
+			return
+		}
+		token, tokenErr := auth.EnsureValidToken(ctx.DataDir, config)
+		if tokenErr != nil {
+			fmt.Fprintf(os.Stderr, "idea sync: token %s: %v\n", item.AccountName, tokenErr)
+			return
+		}
+		client, err = tasks.NewClient(token, config)
+	} else {
+		authConfig, authErr := w.getAuthenticatedClient()
+		if authErr != nil {
+			fmt.Fprintf(os.Stderr, "idea sync: auth: %v\n", authErr)
+			return
+		}
+		client, err = tasks.NewClient(authConfig.Token, authConfig.Config)
+	}
+
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "idea sync: client: %v\n", err)
+		return
+	}
+
+	if delErr := client.DeleteTask(item.ListID, item.Task.Id); delErr != nil {
+		fmt.Fprintf(os.Stderr, "idea sync: delete %q: %v\n", item.Task.Title, delErr)
+	}
 }
 
 // syncIdeasToInbox syncs ideas from the current account's Ideas list to the
