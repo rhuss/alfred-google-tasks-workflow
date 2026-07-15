@@ -13,6 +13,7 @@ import (
 	"github.com/rhuss/alfred-google-tasks-workflow/internal/ideas"
 	"github.com/rhuss/alfred-google-tasks-workflow/internal/input"
 	"github.com/rhuss/alfred-google-tasks-workflow/internal/tasks"
+	taskapi "google.golang.org/api/tasks/v1"
 )
 
 // Workflow wraps the AwGo workflow instance and provides command routing.
@@ -551,6 +552,11 @@ func (w *Workflow) handleAdd(args []string) {
 		return
 	}
 
+	if w.addToIdeaInbox(client, created, listName) {
+		NotifySuccess("Google Tasks", fmt.Sprintf("Idea captured: %s", created.Title))
+		return
+	}
+
 	subtitle := fmt.Sprintf("Added to %s", listName)
 	if len(created.Due) >= 10 {
 		subtitle += fmt.Sprintf(" (due %s)", created.Due[:10])
@@ -742,6 +748,56 @@ func (w *Workflow) fetchTasksForCurrentAccount(listFilter string) ([]tasks.TaskI
 		return client.FetchTasksFromList(listFilter)
 	}
 	return client.FetchAllTasks()
+}
+
+// addToIdeaInbox checks if a newly created task belongs to a configured idea
+// list. If so, it writes the task directly to the inbox file and deletes it
+// from Google Tasks. Returns true if the task was handled as an idea.
+func (w *Workflow) addToIdeaInbox(client *tasks.Client, task *taskapi.Task, listName string) bool {
+	inboxPath := os.Getenv("IDEA_INBOX_PATH")
+	listNames := ideas.ParseListNames(os.Getenv("IDEA_LIST_NAME"))
+	if inboxPath == "" || len(listNames) == 0 {
+		return false
+	}
+
+	match := false
+	lowerListName := strings.ToLower(listName)
+	for _, name := range listNames {
+		if strings.ToLower(name) == lowerListName {
+			match = true
+			break
+		}
+	}
+	if !match {
+		return false
+	}
+
+	accountName := ""
+	if w.AccountConfig != nil && w.AccountCtx.Name != "" {
+		accountName = w.AccountCtx.Name
+	}
+
+	entry := ideas.IdeaEntry{
+		Title:       task.Title,
+		Date:        ideas.FormatDate(task.Updated),
+		Account:     accountName,
+		TaskID:      task.Id,
+		Description: task.Notes,
+	}
+
+	if err := ideas.AppendIdeaEntry(inboxPath, entry); err != nil {
+		fmt.Fprintf(os.Stderr, "idea inbox: failed to write: %v\n", err)
+		return false
+	}
+
+	list, err := client.FindTaskListByName(listName)
+	if err == nil && list != nil {
+		if delErr := client.DeleteTask(list.Id, task.Id); delErr != nil {
+			fmt.Fprintf(os.Stderr, "idea inbox: failed to delete from tasks: %v\n", delErr)
+		}
+	}
+
+	return true
 }
 
 // syncIdeasToInbox syncs ideas from the current account's Ideas list to the
