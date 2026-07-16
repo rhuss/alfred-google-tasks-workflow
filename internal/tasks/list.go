@@ -137,9 +137,10 @@ func ClassifyTimeframe(dueStr string, now time.Time) Timeframe {
 		return TimeframeToday
 	}
 
-	// "This Week" means within the next 7 days (including today)
+	// "This Week" means due within the next 7 days, inclusive of day 7
+	// (DueDate <= today + 7 days), matching the data model.
 	endOfWeek := today.AddDate(0, 0, 7)
-	if dueDate.Before(endOfWeek) {
+	if !dueDate.After(endOfWeek) {
 		return TimeframeThisWeek
 	}
 

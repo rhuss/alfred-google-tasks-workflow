@@ -47,9 +47,19 @@ func TestClassifyTimeframe(t *testing.T) {
 			expected: TimeframeThisWeek,
 		},
 		{
-			name:     "7 days from now (later)",
+			name:     "7 days from now (this week, inclusive boundary)",
 			dueStr:   "2026-07-08T00:00:00Z",
+			expected: TimeframeThisWeek,
+		},
+		{
+			name:     "8 days from now (later)",
+			dueStr:   "2026-07-09T00:00:00Z",
 			expected: TimeframeLater,
+		},
+		{
+			name:     "fractional seconds due timestamp",
+			dueStr:   "2026-07-02T00:00:00.000Z",
+			expected: TimeframeThisWeek,
 		},
 		{
 			name:     "next month (later)",

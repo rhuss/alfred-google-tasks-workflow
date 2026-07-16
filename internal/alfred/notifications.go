@@ -39,6 +39,10 @@ func escapeAppleScript(s string) string {
 			result = append(result, '\\', '\\')
 		case '\n':
 			result = append(result, '\\', 'n')
+		case '\r':
+			result = append(result, '\\', 'r')
+		case '\t':
+			result = append(result, '\\', 't')
 		default:
 			result = append(result, s[i])
 		}
